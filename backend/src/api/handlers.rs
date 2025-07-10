@@ -1,6 +1,6 @@
 use super::{
     lock::{freeze_account, unfreeze_account},
-    models::{Account, Action, ItemPayload, RedisAccount, RedisAction, Token},
+    models::{Account, Action, ItemPayload, RedisAccount, RedisAction, Token, WebsitePath},
     redis::{
         create_redis_account, get_redis_account, handle_item_insertion, increment_lock_key,
         is_redis_locked, remove_id,
@@ -67,6 +67,7 @@ pub async fn forgot_handler(
 
     if is_redis_locked(
         state.clone(),
+        WebsitePath::BoilerSwap.as_ref(),
         &failed_verify_key,
         &payload.token,
         &state.config.verify_max_attempts,
@@ -74,6 +75,7 @@ pub async fn forgot_handler(
     .await?
         || is_redis_locked(
             state.clone(),
+            WebsitePath::BoilerSwap.as_ref(),
             &code_key,
             &payload.token,
             &state.config.max_codes,
@@ -100,6 +102,7 @@ pub async fn forgot_handler(
             RedisAction::Forgot,
             &Some(forgot_key),
             &Some(code_key),
+            WebsitePath::BoilerSwap,
         )
         .await?,
     )
@@ -124,7 +127,11 @@ pub async fn delete_handler(
             .await?;
     }
 
-    Ok((StatusCode::OK, generate_cookie("", "", 0)).into_response())
+    Ok((
+        StatusCode::OK,
+        generate_cookie("", "", 0, WebsitePath::BoilerSwap.as_ref()),
+    )
+        .into_response())
 }
 
 pub async fn verify_handler(
@@ -133,23 +140,26 @@ pub async fn verify_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<Token>,
 ) -> Result<impl IntoResponse, AppError> {
-    let (result, redis_action, id) = match verify_token(state.clone(), headers.clone()).await? {
-        Some((a, pending_redis_action, c)) => {
-            if pending_redis_action == RedisAction::Session {
+    let verified_result = match verify_token(state.clone(), headers.clone()).await? {
+        Some(verified_result) => {
+            if verified_result.redis_action == RedisAction::Session {
                 return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
             }
-            (a, pending_redis_action, c)
+            verified_result
         }
         None => {
             return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
         }
     };
 
-    if redis_action == RedisAction::Update && validate_password(&payload.token).is_err() {
+    if verified_result.redis_action == RedisAction::Update
+        && validate_password(&payload.token).is_err()
+    {
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
     }
 
-    if (redis_action == RedisAction::Auth || redis_action == RedisAction::Forgot)
+    if (verified_result.redis_action == RedisAction::Auth
+        || verified_result.redis_action == RedisAction::Forgot)
         && (payload.token.len() != *CODE_LENGTH || !CODE_REGEX.is_match(&payload.token))
     {
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
@@ -164,20 +174,43 @@ pub async fn verify_handler(
 
     let redis_account = match get_redis_account(
         state.clone(),
-        &result,
-        &redis_action,
-        &id,
+        &verified_result,
         &payload.token,
         RedisAction::LockedTemporary,
         &failed_verify_key,
+        WebsitePath::BoilerSwap.as_ref(),
     )
     .await?
     {
         Some(account) => {
-            remove_id(state.clone(), &failed_verify_key, &account.email).await?;
-            remove_id(state.clone(), &failed_auth_key, &account.email).await?;
-            remove_id(state.clone(), &forgot_key, &account.email).await?;
-            remove_id(state.clone(), &code_key, &account.email).await?;
+            remove_id(
+                state.clone(),
+                WebsitePath::BoilerSwap.as_ref(),
+                &failed_verify_key,
+                &account.email,
+            )
+            .await?;
+            remove_id(
+                state.clone(),
+                WebsitePath::BoilerSwap.as_ref(),
+                &failed_auth_key,
+                &account.email,
+            )
+            .await?;
+            remove_id(
+                state.clone(),
+                WebsitePath::BoilerSwap.as_ref(),
+                &forgot_key,
+                &account.email,
+            )
+            .await?;
+            remove_id(
+                state.clone(),
+                WebsitePath::BoilerSwap.as_ref(),
+                &code_key,
+                &account.email,
+            )
+            .await?;
             account
         }
         None => {
@@ -185,25 +218,26 @@ pub async fn verify_handler(
         }
     };
 
-    if redis_action == RedisAction::Forgot {
-        freeze_account(state.clone(), &redis_account.email).await?;
+    if verified_result.redis_action == RedisAction::Forgot {
+        freeze_account(state.clone(), &redis_account.email, WebsitePath::BoilerSwap).await?;
 
         return Ok((
             StatusCode::OK,
             create_temporary_session(
                 state.clone(),
-                &result,
+                &verified_result.serialized_account,
                 &redis_account,
                 RedisAction::Update,
                 &None,
                 &None,
+                WebsitePath::BoilerSwap,
             )
             .await?,
         )
             .into_response());
     }
 
-    if redis_action == RedisAction::Update {
+    if verified_result.redis_action == RedisAction::Update {
         unfreeze_account(state.clone(), &redis_account.email, &payload.token).await?;
     }
 
@@ -214,6 +248,7 @@ pub async fn verify_handler(
             &redis_account,
             RedisAction::Session,
             RedisAction::SessionStore,
+            WebsitePath::BoilerSwap,
         )
         .await?,
     )
@@ -233,6 +268,7 @@ pub async fn authenticate_handler(
 
     if is_redis_locked(
         state.clone(),
+        WebsitePath::BoilerSwap.as_ref(),
         &failed_auth_key,
         &payload.email,
         &state.config.auth_max_attempts,
@@ -240,6 +276,7 @@ pub async fn authenticate_handler(
     .await?
         || is_redis_locked(
             state.clone(),
+            WebsitePath::BoilerSwap.as_ref(),
             &code_key,
             &payload.email,
             &state.config.max_codes,
@@ -252,6 +289,7 @@ pub async fn authenticate_handler(
     if payload.action == Action::Forgot {
         increment_lock_key(
             state.clone(),
+            WebsitePath::BoilerSwap.as_ref(),
             &failed_auth_key,
             &payload.email,
             &state.config.auth_lock_duration_seconds,
@@ -271,11 +309,18 @@ pub async fn authenticate_handler(
         &payload.email,
         &payload.password,
         &failed_auth_key,
+        WebsitePath::BoilerSwap.as_ref(),
     )
     .await?
     {
         Some(account) => {
-            remove_id(state.clone(), &failed_auth_key, &payload.email).await?;
+            remove_id(
+                state.clone(),
+                WebsitePath::BoilerSwap.as_ref(),
+                &failed_auth_key,
+                &payload.email,
+            )
+            .await?;
             account
         }
         None => {
@@ -292,6 +337,7 @@ pub async fn authenticate_handler(
             RedisAction::Auth,
             &None,
             &Some(code_key),
+            WebsitePath::BoilerSwap,
         )
         .await?,
     )
@@ -304,11 +350,11 @@ pub async fn post_item_handler(
     Json(payload): Json<ItemPayload>,
 ) -> Result<impl IntoResponse, AppError> {
     let email = match verify_token(state.clone(), headers.clone()).await? {
-        Some((a, pending_redis_action, _)) => {
-            if pending_redis_action != RedisAction::Session {
+        Some(verified_result) => {
+            if verified_result.redis_action != RedisAction::Session {
                 return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
             }
-            a
+            verified_result.serialized_account
         }
         None => {
             return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
@@ -321,6 +367,7 @@ pub async fn post_item_handler(
 
     if is_redis_locked(
         state.clone(),
+        WebsitePath::BoilerSwap.as_ref(),
         RedisAction::LockedItems.as_ref(),
         &email.clone().expect("session creation faulty"),
         &state.config.max_items,
@@ -334,6 +381,7 @@ pub async fn post_item_handler(
         state.clone(),
         payload,
         &email.expect("session creation faulty"),
+        WebsitePath::BoilerSwap.as_ref(),
     )
     .await?;
 
@@ -345,32 +393,40 @@ pub async fn resend_handler(
     ConnectInfo(address): ConnectInfo<SocketAddr>,
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
-    let (result, redis_action, id) = match verify_token(state.clone(), headers.clone()).await? {
-        Some((a, pending_redis_action, c)) => {
-            if pending_redis_action != RedisAction::Auth
-                && pending_redis_action != RedisAction::Forgot
+    let verified_result = match verify_token(state.clone(), headers.clone()).await? {
+        Some(verified_result) => {
+            if verified_result.redis_action != RedisAction::Auth
+                && verified_result.redis_action != RedisAction::Forgot
             {
                 return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
             }
-            (a, pending_redis_action, c)
+            verified_result
         }
         None => {
             return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
         }
     };
 
-    if result.is_none() {
+    if verified_result.serialized_account.is_none() {
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
     }
 
-    remove_id(state.clone(), redis_action.as_ref(), &id).await?;
+    remove_id(
+        state.clone(),
+        WebsitePath::BoilerSwap.as_ref(),
+        verified_result.redis_action.as_ref(),
+        &verified_result.id,
+    )
+    .await?;
 
-    let redis_account: RedisAccount = serde_json::from_str(&result.expect("is_none failed"))?;
+    let redis_account: RedisAccount =
+        serde_json::from_str(&verified_result.serialized_account.expect("is_none failed"))?;
     let hashed_ip = get_hashed_ip(&headers, address.ip());
     let code_key = get_key(RedisAction::LockedCode, &hashed_ip);
 
     if is_redis_locked(
         state.clone(),
+        WebsitePath::BoilerSwap.as_ref(),
         &code_key,
         &redis_account.email,
         &state.config.max_codes,
@@ -386,9 +442,10 @@ pub async fn resend_handler(
             state.clone(),
             &None,
             &redis_account,
-            redis_action,
+            verified_result.redis_action,
             &None,
             &Some(code_key),
+            WebsitePath::BoilerSwap,
         )
         .await?,
     )

@@ -1,6 +1,6 @@
 use super::{
     database::{check_lock, unlock_account, update_lock},
-    models::RedisAction,
+    models::{RedisAction, WebsitePath},
     redis::{delete_all_sessions, try_get},
     verify::hash_password,
 };
@@ -19,7 +19,11 @@ pub async fn check_db_lock(state: Arc<AppState>, email: &str) -> Result<bool, Ap
     Ok(false)
 }
 
-pub async fn freeze_account(state: Arc<AppState>, email: &str) -> Result<(), AppError> {
+pub async fn freeze_account(
+    state: Arc<AppState>,
+    email: &str,
+    website_path: WebsitePath,
+) -> Result<(), AppError> {
     if check_db_lock(state.clone(), email).await? {
         return Ok(());
     }
@@ -38,6 +42,7 @@ pub async fn freeze_account(state: Arc<AppState>, email: &str) -> Result<(), App
 
     delete_all_sessions(
         state.clone(),
+        website_path.as_ref(),
         RedisAction::Session.as_ref(),
         RedisAction::SessionStore.as_ref(),
         email,
@@ -68,12 +73,19 @@ pub async fn check_locks(
     state: Arc<AppState>,
     email: &str,
     issued_timestamp: i64,
+    website_path: &str,
 ) -> Result<bool, AppError> {
     if check_db_lock(state.clone(), email).await? {
         return Ok(true);
     }
 
-    let locked_timestamp = try_get(state.clone(), RedisAction::LockedTime.as_ref(), email).await?;
+    let locked_timestamp = try_get(
+        state.clone(),
+        website_path,
+        RedisAction::LockedTime.as_ref(),
+        email,
+    )
+    .await?;
 
     if locked_timestamp.is_some()
         && issued_timestamp

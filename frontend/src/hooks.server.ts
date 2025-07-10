@@ -14,7 +14,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			.sign(new TextEncoder().encode(env.API_TOKEN))
 
 		event.cookies.set('api_token', jwt, {
-			path: '/',
+			path: '/swap/api',
 			httpOnly: true,
 			sameSite: 'strict',
 			secure: true,
@@ -33,7 +33,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			.sign(new TextEncoder().encode(env.SEARCH_TOKEN))
 
 		event.cookies.set('search_token', jwt, {
-			path: '/',
+			path: '/search',
 			httpOnly: true,
 			sameSite: 'strict',
 			secure: true,

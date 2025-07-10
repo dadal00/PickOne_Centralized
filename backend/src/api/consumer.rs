@@ -14,6 +14,7 @@ pub struct MeiliConsumer {
     pub meili_index: String,
     pub redis_deletion_name: String,
     pub scylla_id_name: String,
+    pub website_path: String,
 }
 
 impl MeiliConsumer {
@@ -22,12 +23,14 @@ impl MeiliConsumer {
         meili_index: String,
         redis_deletion_name: String,
         scylla_id_name: String,
+        website_path: String,
     ) -> Self {
         Self {
             state,
             meili_index,
             redis_deletion_name,
             scylla_id_name,
+            website_path,
         }
     }
 }
@@ -57,6 +60,7 @@ impl Consumer for MeiliConsumer {
                     &self.meili_index,
                     &self.redis_deletion_name,
                     &self.scylla_id_name,
+                    &self.website_path,
                 )
                 .await?;
             }
@@ -71,6 +75,7 @@ pub struct MeiliConsumerFactory {
     pub meili_index: String,
     pub redis_deletion_name: String,
     pub scylla_id_name: String,
+    pub website_path: String,
 }
 
 #[async_trait]
@@ -82,6 +87,7 @@ impl ConsumerFactory for MeiliConsumerFactory {
                 self.meili_index.clone(),
                 self.redis_deletion_name.clone(),
                 self.scylla_id_name.clone(),
+                self.website_path.clone(),
             )
             .await,
         )
@@ -94,6 +100,7 @@ async fn handle_item_deletion(
     meili_index: &str,
     redis_deletion_name: &str,
     scylla_id_name: &str,
+    website_path: &str,
 ) -> anyhow::Result<()> {
     let id = get_cdc_id(data, scylla_id_name);
 
@@ -101,14 +108,26 @@ async fn handle_item_deletion(
 
     decrement_items(
         state.redis_connection_manager.clone(),
+        website_path,
         RedisAction::LockedItems.as_ref(),
-        &try_get(state.clone(), redis_deletion_name, &id.to_string())
-            .await?
-            .expect("item insertion misconfigured"),
+        &try_get(
+            state.clone(),
+            website_path,
+            redis_deletion_name,
+            &id.to_string(),
+        )
+        .await?
+        .expect("item insertion misconfigured"),
     )
     .await?;
 
-    remove_id(state.clone(), redis_deletion_name, &id.to_string()).await?;
+    remove_id(
+        state.clone(),
+        website_path,
+        redis_deletion_name,
+        &id.to_string(),
+    )
+    .await?;
 
     Ok(())
 }

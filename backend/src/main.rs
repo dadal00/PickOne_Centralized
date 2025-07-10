@@ -5,7 +5,7 @@ use crate::{
             api_token_check, authenticate_handler, delete_handler, forgot_handler,
             post_item_handler, resend_handler, verify_handler,
         },
-        models::RedisAction,
+        models::{RedisAction, WebsitePath},
         schema::{KEYSPACE, columns::items, tables},
     },
     error::AppError,
@@ -58,12 +58,30 @@ async fn main() -> Result<(), AppError> {
         .max_age(Duration::from_secs(60 * 60));
 
     let app = Router::new()
-        .route("/api/authenticate", post(authenticate_handler))
-        .route("/api/verify", post(verify_handler))
-        .route("/api/delete", delete(delete_handler))
-        .route("/api/forgot", post(forgot_handler))
-        .route("/api/post-item", post(post_item_handler))
-        .route("/api/resend", post(resend_handler))
+        .route(
+            &format!("/{}/api/authenticate", WebsitePath::BoilerSwap.as_ref()),
+            post(authenticate_handler),
+        )
+        .route(
+            &format!("/{}/api/verify", WebsitePath::BoilerSwap.as_ref()),
+            post(verify_handler),
+        )
+        .route(
+            &format!("/{}/api/delete", WebsitePath::BoilerSwap.as_ref()),
+            delete(delete_handler),
+        )
+        .route(
+            &format!("/{}/api/forgot", WebsitePath::BoilerSwap.as_ref()),
+            post(forgot_handler),
+        )
+        .route(
+            &format!("/{}/api/post-item", WebsitePath::BoilerSwap.as_ref()),
+            post(post_item_handler),
+        )
+        .route(
+            &format!("/{}/api/resend", WebsitePath::BoilerSwap.as_ref()),
+            post(resend_handler),
+        )
         .route("/metrics", get(metrics_handler))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
@@ -86,6 +104,7 @@ async fn main() -> Result<(), AppError> {
         tables::ITEMS,
         items::ITEM_ID,
         RedisAction::DeletedItem.as_ref(),
+        WebsitePath::BoilerSwap.as_ref(),
     )
     .await?;
 

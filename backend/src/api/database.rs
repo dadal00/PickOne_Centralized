@@ -390,6 +390,7 @@ pub async fn start_cdc(
     scylla_table: &str,
     scylla_id_name: &str,
     redis_deletion_name: &str,
+    website_path: &str,
 ) -> Result<(CDCLogReader, RemoteHandle<Result<(), anyhowError>>), AppError> {
     let items_checkpoint_saver = Arc::new(
         TableBackedCheckpointSaver::new_with_default_ttl(
@@ -416,6 +417,7 @@ pub async fn start_cdc(
             meili_index: scylla_table.to_string(),
             redis_deletion_name: redis_deletion_name.to_string(),
             scylla_id_name: scylla_id_name.to_string(),
+            website_path: website_path.to_string(),
         }))
         .checkpoint_saver(items_checkpoint_saver)
         .build()

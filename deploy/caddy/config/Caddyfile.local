@@ -27,7 +27,7 @@
 		reverse_proxy {$MEILI_NAME}:{$MEILI_PORT}
 	}
 
-	handle /api/* {
+	handle /swap/api/* {
 		authorize with verifyAPI
 		reverse_proxy {$RUST_NAME}:{$RUST_PORT}
 	}

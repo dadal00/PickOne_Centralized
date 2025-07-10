@@ -1,7 +1,7 @@
 use super::{
     database::{get_user, insert_item},
     lock::check_locks,
-    models::{Action, ItemPayload, RedisAccount, RedisAction},
+    models::{Action, ItemPayload, RedisAccount, RedisAction, VerifiedTokenResult},
     twofactor::generate_code,
     verify::{hash_password, verify_password},
 };
@@ -64,6 +64,7 @@ pub async fn init_redis() -> Result<ConnectionManager, AppError> {
 
 pub async fn delete_all_sessions(
     state: Arc<AppState>,
+    website_path: &str,
     key: &str,
     key_secondary: &str,
     email: &str,
@@ -73,13 +74,19 @@ pub async fn delete_all_sessions(
     for session_id in state
         .redis_connection_manager
         .clone()
-        .zrange(format!("{}:{}", key_secondary, email), 0, -1)
+        .zrange(
+            format!("{}:{}:{}", website_path, key_secondary, email),
+            0,
+            -1,
+        )
         .await?
     {
-        pipe.del(format!("{}:{}", key, session_id)).ignore();
+        pipe.del(format!("{}:{}:{}", website_path, key, session_id))
+            .ignore();
     }
 
-    pipe.del(format!("{}:{}", key_secondary, email)).ignore();
+    pipe.del(format!("{}:{}:{}", website_path, key_secondary, email))
+        .ignore();
 
     pipe.query_async::<()>(&mut state.redis_connection_manager.clone())
         .await?;
@@ -89,6 +96,7 @@ pub async fn delete_all_sessions(
 
 pub async fn insert_session(
     state: Arc<AppState>,
+    website_path: &str,
     key: &str,
     session_id: &str,
     key_secondary: &str,
@@ -102,26 +110,38 @@ pub async fn insert_session(
     state
         .redis_connection_manager
         .clone()
-        .set_ex(format!("{}:{}", key, session_id), email, 3600)
+        .set_ex(
+            format!("{}:{}:{}", website_path, key, session_id),
+            email,
+            3600,
+        )
         .await?;
 
     state
         .redis_connection_manager
         .clone()
-        .zadd(format!("{}:{}", key_secondary, email), session_id, now)
+        .zadd(
+            format!("{}:{}:{}", website_path, key_secondary, email),
+            session_id,
+            now,
+        )
         .await?;
 
     if state
         .redis_connection_manager
         .clone()
-        .zcard(format!("{}:{}", key_secondary, email))
+        .zcard(format!("{}:{}:{}", website_path, key_secondary, email))
         .await?
         > state.config.max_sessions.into()
     {
         state
             .redis_connection_manager
             .clone()
-            .zremrangebyrank(format!("{}:{}", key_secondary, email), 0, 0)
+            .zremrangebyrank(
+                format!("{}:{}:{}", website_path, key_secondary, email),
+                0,
+                0,
+            )
             .await?;
     }
 
@@ -130,6 +150,7 @@ pub async fn insert_session(
 
 pub async fn insert_id(
     state: Arc<AppState>,
+    website_path: &str,
     key_prefix: &str,
     key_id: &str,
     value: &str,
@@ -138,7 +159,11 @@ pub async fn insert_id(
     state
         .redis_connection_manager
         .clone()
-        .set_ex(format!("{}:{}", key_prefix, key_id), value, ttl.into())
+        .set_ex(
+            format!("{}:{}:{}", website_path, key_prefix, key_id),
+            value,
+            ttl.into(),
+        )
         .await?;
 
     Ok(())
@@ -146,13 +171,14 @@ pub async fn insert_id(
 
 pub async fn remove_id(
     state: Arc<AppState>,
+    website_path: &str,
     key_prefix: &str,
     key_id: &str,
 ) -> Result<(), AppError> {
     state
         .redis_connection_manager
         .clone()
-        .del(format!("{}:{}", key_prefix, key_id))
+        .del(format!("{}:{}:{}", website_path, key_prefix, key_id))
         .await?;
 
     Ok(())
@@ -160,12 +186,13 @@ pub async fn remove_id(
 
 pub async fn is_temporarily_locked(
     state: Arc<AppState>,
+    website_path: &str,
     key: &str,
     id: &str,
     ttl: i64,
 ) -> Result<bool, AppError> {
     let result: Option<String> = redis::cmd("SET")
-        .arg(format!("{}:{}", key, id))
+        .arg(format!("{}:{}:{}", website_path, key, id))
         .arg("1")
         .arg("NX")
         .arg("EX")
@@ -178,28 +205,36 @@ pub async fn is_temporarily_locked(
 
 pub async fn try_get(
     state: Arc<AppState>,
+    website_path: &str,
     key: &str,
     email: &str,
 ) -> Result<Option<String>, AppError> {
     Ok(state
         .redis_connection_manager
         .clone()
-        .get(format!("{}:{}", key, email))
+        .get(format!("{}:{}:{}", website_path, key, email))
         .await?)
 }
 
 pub async fn get_redis_account(
     state: Arc<AppState>,
-    result: &Option<String>,
-    redis_action: &RedisAction,
-    id: &str,
+    verified_result: &VerifiedTokenResult,
     code: &str,
     redis_action_secondary: RedisAction,
     failed_verify_key: &str,
+    website_path: &str,
 ) -> Result<Option<RedisAccount>, AppError> {
-    match result {
+    match &verified_result.serialized_account {
         Some(serialized) => {
-            if is_temporarily_locked(state.clone(), redis_action_secondary.as_ref(), id, 1).await? {
+            if is_temporarily_locked(
+                state.clone(),
+                website_path,
+                redis_action_secondary.as_ref(),
+                &verified_result.id,
+                1,
+            )
+            .await?
+            {
                 return Ok(None);
             }
 
@@ -207,6 +242,7 @@ pub async fn get_redis_account(
 
             if is_redis_locked(
                 state.clone(),
+                website_path,
                 failed_verify_key,
                 &deserialized.email,
                 &state.config.verify_max_attempts,
@@ -216,21 +252,26 @@ pub async fn get_redis_account(
                 return Ok(None);
             }
 
-            let locked = match redis_action {
+            let locked = match verified_result.redis_action {
                 RedisAction::Auth => {
                     check_locks(
                         state.clone(),
                         &deserialized.email,
                         deserialized.issued_timestamp.expect("auth account"),
+                        website_path,
                     )
                     .await?
                 }
                 _ => false,
             };
 
-            if !locked && *redis_action != RedisAction::Update && code != deserialized.code {
+            if !locked
+                && verified_result.redis_action != RedisAction::Update
+                && code != deserialized.code
+            {
                 increment_lock_key(
                     state.clone(),
+                    website_path,
                     failed_verify_key,
                     &deserialized.email,
                     &state.config.verify_lock_duration_seconds,
@@ -240,7 +281,13 @@ pub async fn get_redis_account(
                 return Ok(None);
             }
 
-            remove_id(state.clone(), redis_action.as_ref(), id).await?;
+            remove_id(
+                state.clone(),
+                website_path,
+                verified_result.redis_action.as_ref(),
+                &verified_result.id,
+            )
+            .await?;
 
             if locked {
                 return Ok(None);
@@ -258,6 +305,7 @@ pub async fn create_redis_account(
     email: &str,
     password: &str,
     failed_auth_key: &str,
+    website_path: &str,
 ) -> Result<Option<RedisAccount>, AppError> {
     match get_user(state.clone(), email).await? {
         None => {
@@ -291,6 +339,7 @@ pub async fn create_redis_account(
             {
                 increment_lock_key(
                     state.clone(),
+                    website_path,
                     failed_auth_key,
                     email,
                     &state.config.auth_lock_duration_seconds,
@@ -313,13 +362,14 @@ pub async fn create_redis_account(
 
 pub async fn increment_lock_key(
     state: Arc<AppState>,
+    website_path: &str,
     key: &str,
     email: &str,
     locked_duration_seconds: &u16,
     max_attempts: &u8,
 ) -> Result<(), AppError> {
     let _count: () = FAILED_ATTEMPTS_SCRIPT
-        .key(format!("{}:{}", key, email))
+        .key(format!("{}:{}:{}", website_path, key, email))
         .arg(locked_duration_seconds)
         .arg(max_attempts)
         .invoke_async(&mut state.redis_connection_manager.clone())
@@ -330,11 +380,12 @@ pub async fn increment_lock_key(
 
 pub async fn decrement_items(
     redis_connection_manager: ConnectionManager,
+    website_path: &str,
     key: &str,
     email: &str,
 ) -> Result<(), AppError> {
     let _count: () = DECR_ITEMS_SCRIPT
-        .key(format!("{}:{}", key, email))
+        .key(format!("{}:{}:{}", website_path, key, email))
         .invoke_async(&mut redis_connection_manager.clone())
         .await?;
 
@@ -345,9 +396,11 @@ pub async fn handle_item_insertion(
     state: Arc<AppState>,
     item: ItemPayload,
     email: &str,
+    website_path: &str,
 ) -> Result<(), AppError> {
     insert_id(
         state.clone(),
+        website_path,
         RedisAction::DeletedItem.as_ref(),
         &insert_item(state.clone(), item).await?.to_string(),
         email,
@@ -357,6 +410,7 @@ pub async fn handle_item_insertion(
 
     increment_lock_key(
         state.clone(),
+        website_path,
         RedisAction::LockedItems.as_ref(),
         email,
         &0,
@@ -369,11 +423,12 @@ pub async fn handle_item_insertion(
 
 pub async fn is_redis_locked(
     state: Arc<AppState>,
+    website_path: &str,
     key_prefix: &str,
     key_id: &str,
     threshold: &u8,
 ) -> Result<bool, AppError> {
-    if let Some(attempts) = try_get(state.clone(), key_prefix, key_id).await? {
+    if let Some(attempts) = try_get(state.clone(), website_path, key_prefix, key_id).await? {
         if attempts.parse::<u8>()? >= *threshold {
             return Ok(true);
         }

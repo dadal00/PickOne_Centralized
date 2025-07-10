@@ -51,6 +51,7 @@ pub fn spawn_code_task(
     email: String,
     token: String,
     forgot_key: Option<String>,
+    website_path: String,
 ) {
     tokio::spawn(async move {
         if forgot_key.is_some() {
@@ -62,6 +63,7 @@ pub fn spawn_code_task(
 
             if let Ok(is_ok) = is_redis_locked(
                 state.clone(),
+                &website_path,
                 &forgot_key.clone().expect("is_some failed"),
                 &email,
                 &state.config.verify_max_attempts,
@@ -89,6 +91,7 @@ pub fn spawn_code_task(
         } else if forgot_key.is_some()
             && (increment_lock_key(
                 state.clone(),
+                &website_path,
                 &forgot_key.expect("is_some failed"),
                 &email,
                 &state.config.verify_lock_duration_seconds,

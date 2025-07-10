@@ -1,6 +1,6 @@
 use super::{
     database::insert_user,
-    models::{Action, RedisAccount, RedisAction},
+    models::{Action, RedisAccount, RedisAction, WebsitePath},
     redis::{increment_lock_key, insert_id, insert_session},
     twofactor::spawn_code_task,
 };
@@ -24,12 +24,12 @@ static COOKIES_TO_CLEAR: Lazy<Vec<&'static str>> = Lazy::new(|| {
     ]
 });
 
-pub static CLEARED_COOKIES: Lazy<cookieCookieJar> = Lazy::new(|| {
+pub static CLEARED_COOKIES_SWAP: Lazy<cookieCookieJar> = Lazy::new(|| {
     let mut jar = cookieCookieJar::new();
 
     for &old_cookie in COOKIES_TO_CLEAR.iter() {
         let expired = Cookie::build(old_cookie)
-            .path("/")
+            .path(format!("/{}", WebsitePath::BoilerSwap.as_ref()))
             .http_only(true)
             .secure(true)
             .same_site(Strict)
@@ -40,11 +40,11 @@ pub static CLEARED_COOKIES: Lazy<cookieCookieJar> = Lazy::new(|| {
     jar
 });
 
-pub fn generate_cookie(key: &str, value: &str, ttl: i64) -> HeaderMap {
-    let mut jar = CLEARED_COOKIES.clone();
+pub fn generate_cookie(key: &str, value: &str, ttl: i64, website_path: &str) -> HeaderMap {
+    let mut jar = CLEARED_COOKIES_SWAP.clone();
 
     let new_cookie = Cookie::build((key.to_owned(), value.to_owned()))
-        .path("/")
+        .path(format!("/{}", website_path))
         .http_only(true)
         .secure(true)
         .same_site(Strict)
@@ -77,6 +77,7 @@ pub async fn create_temporary_session(
     redis_action: RedisAction,
     forgot_key: &Option<String>,
     code_key: &Option<String>,
+    website_path: WebsitePath,
 ) -> Result<HeaderMap, AppError> {
     if redis_action != RedisAction::Update {
         spawn_code_task(
@@ -84,10 +85,12 @@ pub async fn create_temporary_session(
             redis_account.email.clone(),
             redis_account.code.clone(),
             forgot_key.clone(),
+            website_path.as_ref().to_string(),
         );
 
         increment_lock_key(
             state.clone(),
+            website_path.as_ref(),
             code_key.as_ref().unwrap(),
             &redis_account.email.clone(),
             &state.config.max_codes_duration_seconds,
@@ -105,6 +108,7 @@ pub async fn create_temporary_session(
 
     insert_id(
         state.clone(),
+        website_path.as_ref(),
         redis_action.as_ref(),
         &id,
         serialized,
@@ -116,6 +120,7 @@ pub async fn create_temporary_session(
         redis_action.as_ref(),
         &id,
         state.config.temporary_session_duration_seconds.into(),
+        website_path.as_ref(),
     ))
 }
 
@@ -124,6 +129,7 @@ pub async fn create_session(
     redis_account: &RedisAccount,
     redis_action: RedisAction,
     redis_action_secondary: RedisAction,
+    website_path: WebsitePath,
 ) -> Result<HeaderMap, AppError> {
     if redis_account.action == Action::Signup {
         insert_user(state.clone(), redis_account.clone()).await?;
@@ -133,6 +139,7 @@ pub async fn create_session(
 
     insert_session(
         state.clone(),
+        website_path.as_ref(),
         redis_action.as_ref(),
         &session_id,
         redis_action_secondary.as_ref(),
@@ -144,5 +151,6 @@ pub async fn create_session(
         redis_action.as_ref(),
         &session_id,
         state.config.session_duration_seconds.into(),
+        website_path.as_ref(),
     ))
 }

@@ -52,7 +52,7 @@ pub enum RedisAction {
     #[strum(serialize = "temporary_lock")]
     LockedTemporary,
 
-    #[strum(serialize = "update")]
+    #[strum(serialize = "update_id")]
     Update,
 
     #[strum(serialize = "sessions")]
@@ -192,3 +192,15 @@ pub struct CronItem {
 pub type ItemRow<'a> = (Uuid, i8, &'a str, i8, i8, &'a str, i8, NaiveDate);
 
 pub type CronItemRow<'a> = (Uuid, NaiveDate);
+
+#[derive(EnumString, AsRefStr, PartialEq)]
+pub enum WebsitePath {
+    #[strum(serialize = "swap")]
+    BoilerSwap,
+}
+
+pub struct VerifiedTokenResult {
+    pub serialized_account: Option<String>,
+    pub redis_action: RedisAction,
+    pub id: String,
+}
