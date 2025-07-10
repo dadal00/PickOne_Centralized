@@ -157,6 +157,7 @@ services:
       - SVELTE_PORT=${SVELTE_PORT}
       - MEILI_NAME=${MEILI_NAME}
       - MEILI_PORT=${MEILI_PORT}
+      - PUBLIC_SVELTE_SWAP_ROOT=${PUBLIC_SVELTE_SWAP_ROOT}
     volumes:
       - ./caddy/data:/data
       - ./caddy/config:/config
