@@ -8,6 +8,7 @@ use crate::{
         models::{RedisAction, WebsitePath},
         schema::{KEYSPACE, columns::items, tables},
     },
+    bot::chat::run_bot,
     error::AppError,
     metrics::metrics_handler,
     signals::shutdown_signal,
@@ -26,6 +27,7 @@ use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
 
 mod api;
+mod bot;
 mod config;
 mod error;
 mod metrics;
@@ -39,6 +41,10 @@ async fn main() -> Result<(), AppError> {
             EnvFilter::from_default_env(), // backend (target) = info (logging level)
         )
         .init();
+
+    info!("Starting bot...");
+
+    run_bot().await?;
 
     info!("Starting server...");
 

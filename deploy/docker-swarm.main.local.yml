@@ -73,6 +73,7 @@ services:
         condition: on-failure
         delay: 5s
     secrets:
+      - RUST_BOT_CUTS_KEY
       - RUST_FROM_EMAIL
       - RUST_FROM_EMAIL_PASSWORD
       - RUST_FROM_EMAIL_SERVER
@@ -165,6 +166,8 @@ services:
       - ./caddy/config/Caddyfile.local:/etc/caddy/Caddyfile
 
 secrets:
+  RUST_BOT_CUTS_KEY:
+    external: true
   RUST_FROM_EMAIL:
     external: true
   RUST_FROM_EMAIL_PASSWORD:
