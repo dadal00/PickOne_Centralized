@@ -1,0 +1,24 @@
+services:
+  boiler_rust:
+    build:
+      context: ../backend
+    image: boiler_rust:latest
+
+  boiler_svelte:
+    build:
+      args:
+        - PUBLIC_BACKEND_URL=${PUBLIC_BACKEND_URL}
+        - PUBLIC_MAX_CHARS=${PUBLIC_MAX_CHARS}
+        - PUBLIC_CODE_LENGTH=${PUBLIC_CODE_LENGTH}
+        - PUBLIC_MEILI_KEY=${PUBLIC_MEILI_KEY}
+        - PUBLIC_MEILI_URL=${PUBLIC_MEILI_URL}
+        - PUBLIC_TEMP_SESSION_DURATION_SECS=${PUBLIC_TEMP_SESSION_DURATION_SECS}
+        - PUBLIC_PAGE_SIZE=${PUBLIC_PAGE_SIZE}
+        - PUBLIC_MIN_PASSWORD_LENGTH=${PUBLIC_MIN_PASSWORD_LENGTH}
+      context: ../frontend
+    image: boiler_svelte:latest
+
+  boiler_caddy:
+    build:
+      context: ./caddy
+    image: boiler_caddy:latest
