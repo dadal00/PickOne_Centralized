@@ -130,34 +130,6 @@ pub async fn insert_session(
         remove_id(state.clone(), website_path, key, &removed_session_id).await?;
     }
 
-    // state
-    //     .redis_connection_manager
-    //     .clone()
-    //     .zadd(
-    //         format!("{}:{}:{}", website_path, key_secondary, email),
-    //         session_id,
-    //         now,
-    //     )
-    //     .await?;
-
-    // if state
-    //     .redis_connection_manager
-    //     .clone()
-    //     .zcard(format!("{}:{}:{}", website_path, key_secondary, email))
-    //     .await?
-    //     > state.config.max_sessions.into()
-    // {
-    //     state
-    //         .redis_connection_manager
-    //         .clone()
-    //         .zremrangebyrank(
-    //             format!("{}:{}:{}", website_path, key_secondary, email),
-    //             0,
-    //             0,
-    //         )
-    //         .await?;
-    // }
-
     Ok(())
 }
 
