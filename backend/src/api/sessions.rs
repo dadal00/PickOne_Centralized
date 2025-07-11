@@ -40,11 +40,13 @@ pub static CLEARED_COOKIES_SWAP: Lazy<cookieCookieJar> = Lazy::new(|| {
     jar
 });
 
-pub fn generate_cookie(key: &str, value: &str, ttl: i64, website_path: &str) -> HeaderMap {
-    let mut jar = CLEARED_COOKIES_SWAP.clone();
+pub fn generate_cookie(key: &str, value: &str, ttl: i64, website_path: WebsitePath) -> HeaderMap {
+    let mut jar = match website_path {
+        WebsitePath::BoilerSwap => CLEARED_COOKIES_SWAP.clone(),
+    };
 
     let new_cookie = Cookie::build((key.to_owned(), value.to_owned()))
-        .path(format!("/{}", website_path))
+        .path(format!("/{}", website_path.as_ref()))
         .http_only(true)
         .secure(true)
         .same_site(Strict)
@@ -120,7 +122,7 @@ pub async fn create_temporary_session(
         redis_action.as_ref(),
         &id,
         state.config.temporary_session_duration_seconds.into(),
-        website_path.as_ref(),
+        website_path,
     ))
 }
 
@@ -151,6 +153,6 @@ pub async fn create_session(
         redis_action.as_ref(),
         &session_id,
         state.config.session_duration_seconds.into(),
-        website_path.as_ref(),
+        website_path,
     ))
 }

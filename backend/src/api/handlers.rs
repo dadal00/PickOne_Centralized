@@ -129,7 +129,7 @@ pub async fn delete_handler(
 
     Ok((
         StatusCode::OK,
-        generate_cookie("", "", 0, WebsitePath::BoilerSwap.as_ref()),
+        generate_cookie("", "", 0, WebsitePath::BoilerSwap),
     )
         .into_response())
 }

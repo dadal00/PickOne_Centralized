@@ -12,11 +12,7 @@ use redis::{
     AsyncTypedCommands, Client, Script,
     aio::{ConnectionManager, ConnectionManagerConfig},
 };
-use std::{
-    env,
-    sync::Arc,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::{env, sync::Arc, time::Duration};
 use tokio::task::spawn_blocking;
 use tracing::warn;
 
@@ -102,11 +98,6 @@ pub async fn insert_session(
     key_secondary: &str,
     email: &str,
 ) -> Result<(), AppError> {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("Time went backwards")
-        .as_secs_f64();
-
     state
         .redis_connection_manager
         .clone()
@@ -117,33 +108,55 @@ pub async fn insert_session(
         )
         .await?;
 
-    state
-        .redis_connection_manager
-        .clone()
-        .zadd(
-            format!("{}:{}:{}", website_path, key_secondary, email),
-            session_id,
-            now,
-        )
-        .await?;
-
     if state
         .redis_connection_manager
         .clone()
-        .zcard(format!("{}:{}:{}", website_path, key_secondary, email))
+        .lpush(
+            format!("{}:{}:{}", website_path, key_secondary, email),
+            session_id,
+        )
         .await?
         > state.config.max_sessions.into()
     {
-        state
+        let removed_session_id: String = state
             .redis_connection_manager
             .clone()
-            .zremrangebyrank(
+            .rpop(
                 format!("{}:{}:{}", website_path, key_secondary, email),
-                0,
-                0,
+                None,
             )
             .await?;
+
+        remove_id(state.clone(), website_path, key, &removed_session_id).await?;
     }
+
+    // state
+    //     .redis_connection_manager
+    //     .clone()
+    //     .zadd(
+    //         format!("{}:{}:{}", website_path, key_secondary, email),
+    //         session_id,
+    //         now,
+    //     )
+    //     .await?;
+
+    // if state
+    //     .redis_connection_manager
+    //     .clone()
+    //     .zcard(format!("{}:{}:{}", website_path, key_secondary, email))
+    //     .await?
+    //     > state.config.max_sessions.into()
+    // {
+    //     state
+    //         .redis_connection_manager
+    //         .clone()
+    //         .zremrangebyrank(
+    //             format!("{}:{}:{}", website_path, key_secondary, email),
+    //             0,
+    //             0,
+    //         )
+    //         .await?;
+    // }
 
     Ok(())
 }
