@@ -8,7 +8,7 @@ use crate::{
         models::{RedisAction, WebsitePath},
         schema::{KEYSPACE, columns::items, tables},
     },
-    bot::chat::run_bot,
+    bot::chat::start_bot,
     error::AppError,
     metrics::metrics_handler,
     signals::shutdown_signal,
@@ -44,7 +44,7 @@ async fn main() -> Result<(), AppError> {
 
     info!("Starting bot...");
 
-    run_bot().await?;
+    start_bot().await?;
 
     info!("Starting server...");
 
