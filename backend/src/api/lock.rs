@@ -81,9 +81,12 @@ pub async fn check_locks(
 
     let locked_timestamp = try_get(
         state.clone(),
-        website_path,
-        RedisAction::LockedTime.as_ref(),
-        email,
+        &format!(
+            "{}:{}:{}",
+            website_path,
+            RedisAction::LockedTime.as_ref(),
+            email
+        ),
     )
     .await?;
 

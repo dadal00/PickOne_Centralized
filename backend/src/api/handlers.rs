@@ -185,30 +185,42 @@ pub async fn verify_handler(
         Some(account) => {
             remove_id(
                 state.clone(),
-                WebsitePath::BoilerSwap.as_ref(),
-                &failed_verify_key,
-                &account.email,
+                &format!(
+                    "{}:{}:{}",
+                    WebsitePath::BoilerSwap.as_ref(),
+                    &failed_verify_key,
+                    &account.email
+                ),
             )
             .await?;
             remove_id(
                 state.clone(),
-                WebsitePath::BoilerSwap.as_ref(),
-                &failed_auth_key,
-                &account.email,
+                &format!(
+                    "{}:{}:{}",
+                    WebsitePath::BoilerSwap.as_ref(),
+                    &failed_auth_key,
+                    &account.email
+                ),
             )
             .await?;
             remove_id(
                 state.clone(),
-                WebsitePath::BoilerSwap.as_ref(),
-                &forgot_key,
-                &account.email,
+                &format!(
+                    "{}:{}:{}",
+                    WebsitePath::BoilerSwap.as_ref(),
+                    &forgot_key,
+                    &account.email
+                ),
             )
             .await?;
             remove_id(
                 state.clone(),
-                WebsitePath::BoilerSwap.as_ref(),
-                &code_key,
-                &account.email,
+                &format!(
+                    "{}:{}:{}",
+                    WebsitePath::BoilerSwap.as_ref(),
+                    &code_key,
+                    &account.email
+                ),
             )
             .await?;
             account
@@ -316,9 +328,12 @@ pub async fn authenticate_handler(
         Some(account) => {
             remove_id(
                 state.clone(),
-                WebsitePath::BoilerSwap.as_ref(),
-                &failed_auth_key,
-                &payload.email,
+                &format!(
+                    "{}:{}:{}",
+                    WebsitePath::BoilerSwap.as_ref(),
+                    &failed_auth_key,
+                    &payload.email
+                ),
             )
             .await?;
             account
@@ -413,9 +428,12 @@ pub async fn resend_handler(
 
     remove_id(
         state.clone(),
-        WebsitePath::BoilerSwap.as_ref(),
-        verified_result.redis_action.as_ref(),
-        &verified_result.id,
+        &format!(
+            "{}:{}:{}",
+            WebsitePath::BoilerSwap.as_ref(),
+            verified_result.redis_action.as_ref(),
+            &verified_result.id
+        ),
     )
     .await?;
 

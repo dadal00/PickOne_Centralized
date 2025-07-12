@@ -112,9 +112,12 @@ async fn handle_item_deletion(
         RedisAction::LockedItems.as_ref(),
         &try_get(
             state.clone(),
-            website_path,
-            redis_deletion_name,
-            &id.to_string(),
+            &format!(
+                "{}:{}:{}",
+                website_path,
+                redis_deletion_name,
+                &id.to_string()
+            ),
         )
         .await?
         .expect("item insertion misconfigured"),
@@ -123,9 +126,12 @@ async fn handle_item_deletion(
 
     remove_id(
         state.clone(),
-        website_path,
-        redis_deletion_name,
-        &id.to_string(),
+        &format!(
+            "{}:{}:{}",
+            website_path,
+            redis_deletion_name,
+            &id.to_string()
+        ),
     )
     .await?;
 

@@ -58,9 +58,12 @@ pub async fn verify_token(
         return Ok(Some(VerifiedTokenResult {
             serialized_account: try_get(
                 state.clone(),
-                WebsitePath::BoilerSwap.as_ref(),
-                RedisAction::Forgot.as_ref(),
-                &id,
+                &format!(
+                    "{}:{}:{}",
+                    WebsitePath::BoilerSwap.as_ref(),
+                    RedisAction::Forgot.as_ref(),
+                    &id
+                ),
             )
             .await?,
             redis_action: RedisAction::Forgot,
@@ -71,9 +74,12 @@ pub async fn verify_token(
         return Ok(Some(VerifiedTokenResult {
             serialized_account: try_get(
                 state.clone(),
-                WebsitePath::BoilerSwap.as_ref(),
-                RedisAction::Auth.as_ref(),
-                &id,
+                &format!(
+                    "{}:{}:{}",
+                    WebsitePath::BoilerSwap.as_ref(),
+                    RedisAction::Auth.as_ref(),
+                    &id
+                ),
             )
             .await?,
             redis_action: RedisAction::Auth,
@@ -84,9 +90,12 @@ pub async fn verify_token(
         return Ok(Some(VerifiedTokenResult {
             serialized_account: try_get(
                 state.clone(),
-                WebsitePath::BoilerSwap.as_ref(),
-                RedisAction::Update.as_ref(),
-                &id,
+                &format!(
+                    "{}:{}:{}",
+                    WebsitePath::BoilerSwap.as_ref(),
+                    RedisAction::Update.as_ref(),
+                    &id
+                ),
             )
             .await?,
             redis_action: RedisAction::Update,
@@ -97,9 +106,12 @@ pub async fn verify_token(
         return Ok(Some(VerifiedTokenResult {
             serialized_account: try_get(
                 state.clone(),
-                WebsitePath::BoilerSwap.as_ref(),
-                RedisAction::Session.as_ref(),
-                &id,
+                &format!(
+                    "{}:{}:{}",
+                    WebsitePath::BoilerSwap.as_ref(),
+                    RedisAction::Session.as_ref(),
+                    &id
+                ),
             )
             .await?,
             redis_action: RedisAction::Session,

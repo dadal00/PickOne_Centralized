@@ -110,9 +110,12 @@ pub async fn create_temporary_session(
 
     insert_id(
         state.clone(),
-        website_path.as_ref(),
-        redis_action.as_ref(),
-        &id,
+        &format!(
+            "{}:{}:{}",
+            website_path.as_ref(),
+            redis_action.as_ref(),
+            &id
+        ),
         serialized,
         state.config.temporary_session_duration_seconds.into(),
     )

@@ -70,7 +70,7 @@ pub async fn delete_all_sessions(
     for session_id in state
         .redis_connection_manager
         .clone()
-        .zrange(
+        .lrange(
             format!("{}:{}:{}", website_path, key_secondary, email),
             0,
             -1,
@@ -127,7 +127,11 @@ pub async fn insert_session(
             )
             .await?;
 
-        remove_id(state.clone(), website_path, key, &removed_session_id).await?;
+        remove_id(
+            state.clone(),
+            &format!("{}:{}:{}", website_path, key, &removed_session_id),
+        )
+        .await?;
     }
 
     Ok(())
@@ -135,36 +139,21 @@ pub async fn insert_session(
 
 pub async fn insert_id(
     state: Arc<AppState>,
-    website_path: &str,
-    key_prefix: &str,
-    key_id: &str,
+    key: &str,
     value: &str,
     ttl: u32,
 ) -> Result<(), AppError> {
     state
         .redis_connection_manager
         .clone()
-        .set_ex(
-            format!("{}:{}:{}", website_path, key_prefix, key_id),
-            value,
-            ttl.into(),
-        )
+        .set_ex(key, value, ttl.into())
         .await?;
 
     Ok(())
 }
 
-pub async fn remove_id(
-    state: Arc<AppState>,
-    website_path: &str,
-    key_prefix: &str,
-    key_id: &str,
-) -> Result<(), AppError> {
-    state
-        .redis_connection_manager
-        .clone()
-        .del(format!("{}:{}:{}", website_path, key_prefix, key_id))
-        .await?;
+pub async fn remove_id(state: Arc<AppState>, key: &str) -> Result<(), AppError> {
+    state.redis_connection_manager.clone().del(key).await?;
 
     Ok(())
 }
@@ -188,17 +177,8 @@ pub async fn is_temporarily_locked(
     Ok(result.is_none())
 }
 
-pub async fn try_get(
-    state: Arc<AppState>,
-    website_path: &str,
-    key: &str,
-    email: &str,
-) -> Result<Option<String>, AppError> {
-    Ok(state
-        .redis_connection_manager
-        .clone()
-        .get(format!("{}:{}:{}", website_path, key, email))
-        .await?)
+pub async fn try_get(state: Arc<AppState>, key: &str) -> Result<Option<String>, AppError> {
+    Ok(state.redis_connection_manager.clone().get(key).await?)
 }
 
 pub async fn get_redis_account(
@@ -268,9 +248,12 @@ pub async fn get_redis_account(
 
             remove_id(
                 state.clone(),
-                website_path,
-                verified_result.redis_action.as_ref(),
-                &verified_result.id,
+                &format!(
+                    "{}:{}:{}",
+                    website_path,
+                    verified_result.redis_action.as_ref(),
+                    &verified_result.id
+                ),
             )
             .await?;
 
@@ -385,9 +368,12 @@ pub async fn handle_item_insertion(
 ) -> Result<(), AppError> {
     insert_id(
         state.clone(),
-        website_path,
-        RedisAction::DeletedItem.as_ref(),
-        &insert_item(state.clone(), item).await?.to_string(),
+        &format!(
+            "{}:{}:{}",
+            website_path,
+            RedisAction::DeletedItem.as_ref(),
+            &insert_item(state.clone(), item).await?.to_string()
+        ),
         email,
         1_209_600,
     )
@@ -413,7 +399,12 @@ pub async fn is_redis_locked(
     key_id: &str,
     threshold: &u8,
 ) -> Result<bool, AppError> {
-    if let Some(attempts) = try_get(state.clone(), website_path, key_prefix, key_id).await? {
+    if let Some(attempts) = try_get(
+        state.clone(),
+        &format!("{}:{}:{}", website_path, key_prefix, key_id),
+    )
+    .await?
+    {
         if attempts.parse::<u8>()? >= *threshold {
             return Ok(true);
         }
