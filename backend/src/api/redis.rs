@@ -42,6 +42,21 @@ static DECR_ITEMS_SCRIPT: Lazy<Script> = Lazy::new(|| {
     )
 });
 
+static INSERT_SESSION_SCRIPT: Lazy<Script> = Lazy::new(|| {
+    Script::new(
+        r#"
+        redis.call("SETEX", KEYS[1], tonumber(ARGV[3]), ARGV[2])
+        local length = redis.call("LPUSH", KEYS[2], ARGV[1])
+        redis.call("EXPIRE", KEYS[2], tonumber(ARGV[3]))
+        if length > tonumber(ARGV[4]) then
+            local removed_id = redis.call("RPOP", KEYS[2])
+            local removed_key = ARGV[5] .. removed_id
+            redis.call("DEL", removed_key)
+        end
+    "#,
+    )
+});
+
 pub async fn init_redis() -> Result<ConnectionManager, AppError> {
     let redis_url = env::var("RUST_REDIS_URL").unwrap_or_else(|_| {
         warn!("Environment variable RUST_REDIS_URL not found, using default");
@@ -98,41 +113,16 @@ pub async fn insert_session(
     key_secondary: &str,
     email: &str,
 ) -> Result<(), AppError> {
-    state
-        .redis_connection_manager
-        .clone()
-        .set_ex(
-            format!("{}:{}:{}", website_path, key, session_id),
-            email,
-            3600,
-        )
+    let _: () = INSERT_SESSION_SCRIPT
+        .key(format!("{}:{}:{}", website_path, key, session_id))
+        .key(format!("{}:{}:{}", website_path, key_secondary, email))
+        .arg(session_id)
+        .arg(email)
+        .arg(state.config.session_duration_seconds)
+        .arg(state.config.max_sessions)
+        .arg(format!("{}:{}:", website_path, key))
+        .invoke_async(&mut state.redis_connection_manager.clone())
         .await?;
-
-    if state
-        .redis_connection_manager
-        .clone()
-        .lpush(
-            format!("{}:{}:{}", website_path, key_secondary, email),
-            session_id,
-        )
-        .await?
-        > state.config.max_sessions.into()
-    {
-        let removed_session_id: String = state
-            .redis_connection_manager
-            .clone()
-            .rpop(
-                format!("{}:{}:{}", website_path, key_secondary, email),
-                None,
-            )
-            .await?;
-
-        remove_id(
-            state.clone(),
-            &format!("{}:{}:{}", website_path, key, &removed_session_id),
-        )
-        .await?;
-    }
 
     Ok(())
 }

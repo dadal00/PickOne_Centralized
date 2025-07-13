@@ -103,20 +103,23 @@ pub async fn verify_token(
         }));
     }
     if let Some(id) = get_cookie(&headers, RedisAction::Session.as_ref()) {
-        return Ok(Some(VerifiedTokenResult {
-            serialized_account: try_get(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    WebsitePath::BoilerSwap.as_ref(),
-                    RedisAction::Session.as_ref(),
-                    &id
-                ),
-            )
-            .await?,
-            redis_action: RedisAction::Session,
-            id,
-        }));
+        if let Some(result) = try_get(
+            state.clone(),
+            &format!(
+                "{}:{}:{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                RedisAction::Session.as_ref(),
+                &id
+            ),
+        )
+        .await?
+        {
+            return Ok(Some(VerifiedTokenResult {
+                serialized_account: Some(result),
+                redis_action: RedisAction::Session,
+                id,
+            }));
+        }
     }
     Ok(None)
 }

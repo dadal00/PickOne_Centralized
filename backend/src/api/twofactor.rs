@@ -60,8 +60,7 @@ pub fn spawn_code_task(
                 Ok(None) => return,
                 Err(_) => return,
             }
-
-            if let Ok(is_ok) = is_redis_locked(
+            if let Ok(is_locked) = is_redis_locked(
                 state.clone(),
                 &website_path,
                 &forgot_key.clone().expect("is_some failed"),
@@ -70,12 +69,11 @@ pub fn spawn_code_task(
             )
             .await
             {
-                if !is_ok {
+                if is_locked {
                     return;
                 }
             }
         }
-
         if let Err(error) = send_code_email(state.clone(), &email, &token).await {
             match error {
                 AppError::LettreAddress(msg) => {
