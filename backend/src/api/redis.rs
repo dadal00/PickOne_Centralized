@@ -401,3 +401,22 @@ pub async fn is_redis_locked(
     }
     Ok(false)
 }
+
+pub async fn clear_all_keys(
+    state: Arc<AppState>,
+    website_path: &str,
+    keys: &[&str],
+    email: &str,
+) -> Result<(), AppError> {
+    let mut pipe = redis::pipe();
+
+    for key in keys {
+        pipe.del(format!("{}:{}:{}", website_path, key, email))
+            .ignore();
+    }
+
+    pipe.query_async::<()>(&mut state.redis_connection_manager.clone())
+        .await?;
+
+    Ok(())
+}

@@ -2,8 +2,8 @@ use super::{
     lock::{freeze_account, unfreeze_account},
     models::{Account, Action, ItemPayload, RedisAccount, RedisAction, Token, WebsitePath},
     redis::{
-        create_redis_account, get_redis_account, handle_item_insertion, increment_lock_key,
-        is_redis_locked, remove_id,
+        clear_all_keys, create_redis_account, get_redis_account, handle_item_insertion,
+        increment_lock_key, is_redis_locked, remove_id,
     },
     sessions::{create_session, create_temporary_session, generate_cookie, get_cookie},
     twofactor::{CODE_REGEX, generate_code},
@@ -183,44 +183,11 @@ pub async fn verify_handler(
     .await?
     {
         Some(account) => {
-            remove_id(
+            clear_all_keys(
                 state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    WebsitePath::BoilerSwap.as_ref(),
-                    &failed_verify_key,
-                    &account.email
-                ),
-            )
-            .await?;
-            remove_id(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    WebsitePath::BoilerSwap.as_ref(),
-                    &failed_auth_key,
-                    &account.email
-                ),
-            )
-            .await?;
-            remove_id(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    WebsitePath::BoilerSwap.as_ref(),
-                    &forgot_key,
-                    &account.email
-                ),
-            )
-            .await?;
-            remove_id(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    WebsitePath::BoilerSwap.as_ref(),
-                    &code_key,
-                    &account.email
-                ),
+                WebsitePath::BoilerSwap.as_ref(),
+                &[&code_key, &forgot_key, &failed_auth_key, &failed_verify_key],
+                &account.email,
             )
             .await?;
             account

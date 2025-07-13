@@ -1,7 +1,11 @@
-use super::models::RedisAction;
+use super::{
+    models::{RedisAction, VerifiedTokenResult, WebsitePath},
+    redis::try_get,
+};
+use crate::{AppError, AppState};
 use axum::http::header::HeaderMap;
 use sha2::{Digest, Sha256};
-use std::net::IpAddr;
+use std::{net::IpAddr, sync::Arc};
 
 pub fn get_hashed_ip(headers: &HeaderMap, direct_ip: IpAddr) -> String {
     let ip = headers
@@ -29,4 +33,42 @@ pub fn get_key(redis_action: RedisAction, hashed_ip: &str) -> String {
 
 pub fn convert_i8_to_u8(payload: &i8) -> u8 {
     payload.checked_abs().unwrap_or(0) as u8
+}
+
+pub async fn format_verified_result(
+    state: Arc<AppState>,
+    website_path: WebsitePath,
+    redis_action: RedisAction,
+    id: String,
+) -> Result<Option<VerifiedTokenResult>, AppError> {
+    if redis_action == RedisAction::Session {
+        if let Some(result) = try_get(
+            state.clone(),
+            &format!(
+                "{}:{}:{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                RedisAction::Session.as_ref(),
+                &id
+            ),
+        )
+        .await?
+        {
+            return Ok(Some(VerifiedTokenResult {
+                serialized_account: Some(result),
+                redis_action: RedisAction::Session,
+                id,
+            }));
+        }
+        return Ok(None);
+    }
+
+    Ok(Some(VerifiedTokenResult {
+        serialized_account: try_get(
+            state.clone(),
+            &format!("{}:{}:{}", website_path.as_ref(), redis_action.as_ref(), id),
+        )
+        .await?,
+        redis_action,
+        id,
+    }))
 }

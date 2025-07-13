@@ -1,7 +1,7 @@
 use super::{
     models::{DummyClaims, RedisAction, VerifiedTokenResult, WebsitePath},
-    redis::try_get,
     sessions::get_cookie,
+    utilities::format_verified_result,
 };
 use crate::{AppError, AppState};
 use argon2::{
@@ -55,72 +55,45 @@ pub async fn verify_token(
     headers: HeaderMap,
 ) -> Result<Option<VerifiedTokenResult>, AppError> {
     if let Some(id) = get_cookie(&headers, RedisAction::Forgot.as_ref()) {
-        return Ok(Some(VerifiedTokenResult {
-            serialized_account: try_get(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    WebsitePath::BoilerSwap.as_ref(),
-                    RedisAction::Forgot.as_ref(),
-                    &id
-                ),
-            )
-            .await?,
-            redis_action: RedisAction::Forgot,
-            id,
-        }));
-    }
-    if let Some(id) = get_cookie(&headers, RedisAction::Auth.as_ref()) {
-        return Ok(Some(VerifiedTokenResult {
-            serialized_account: try_get(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    WebsitePath::BoilerSwap.as_ref(),
-                    RedisAction::Auth.as_ref(),
-                    &id
-                ),
-            )
-            .await?,
-            redis_action: RedisAction::Auth,
-            id,
-        }));
-    }
-    if let Some(id) = get_cookie(&headers, RedisAction::Update.as_ref()) {
-        return Ok(Some(VerifiedTokenResult {
-            serialized_account: try_get(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    WebsitePath::BoilerSwap.as_ref(),
-                    RedisAction::Update.as_ref(),
-                    &id
-                ),
-            )
-            .await?,
-            redis_action: RedisAction::Update,
-            id,
-        }));
-    }
-    if let Some(id) = get_cookie(&headers, RedisAction::Session.as_ref()) {
-        if let Some(result) = try_get(
+        return format_verified_result(
             state.clone(),
-            &format!(
-                "{}:{}:{}",
-                WebsitePath::BoilerSwap.as_ref(),
-                RedisAction::Session.as_ref(),
-                &id
-            ),
+            WebsitePath::BoilerSwap,
+            RedisAction::Forgot,
+            id,
         )
-        .await?
-        {
-            return Ok(Some(VerifiedTokenResult {
-                serialized_account: Some(result),
-                redis_action: RedisAction::Session,
-                id,
-            }));
-        }
+        .await;
     }
+
+    if let Some(id) = get_cookie(&headers, RedisAction::Auth.as_ref()) {
+        return format_verified_result(
+            state.clone(),
+            WebsitePath::BoilerSwap,
+            RedisAction::Auth,
+            id,
+        )
+        .await;
+    }
+
+    if let Some(id) = get_cookie(&headers, RedisAction::Update.as_ref()) {
+        return format_verified_result(
+            state.clone(),
+            WebsitePath::BoilerSwap,
+            RedisAction::Update,
+            id,
+        )
+        .await;
+    }
+
+    if let Some(id) = get_cookie(&headers, RedisAction::Session.as_ref()) {
+        return format_verified_result(
+            state.clone(),
+            WebsitePath::BoilerSwap,
+            RedisAction::Session,
+            id,
+        )
+        .await;
+    }
+
     Ok(None)
 }
 
