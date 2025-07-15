@@ -1,22 +1,16 @@
 <script>
 	import { PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
+	import BarChart from '$lib/home/components/BarChart.svelte'
+	import Header from '$lib/home/components/Header.svelte'
 </script>
 
 <svelte:head>
 	<title>PickOne</title>
 </svelte:head>
 
-<main class="flex items-center justify-center h-screen bg-gray-50 text-center">
-	<div class="max-w-xl mx-auto px-6 py-12">
-		<h1 class="text-5xl font-bold mb-4">Welcome to PickOne</h1>
-		<p class="text-lg text-gray-600 mb-6">Start browsing.</p>
-		<a
-			href={PUBLIC_SVELTE_SWAP_ROOT}
-			class="inline-block bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700 transition"
-		>
-			Go to BoilerSwap
-		</a>
-	</div>
+<main class="flex flex-col w-screen h-screen bg-[#fff6ed] fixed py-8">
+	<Header />
+	<BarChart />
 </main>
 
 <style lang="postcss">

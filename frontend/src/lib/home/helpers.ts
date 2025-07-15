@@ -1,0 +1,154 @@
+import * as d3 from 'd3'
+import { baseChartConfig, type chartConfig, type ChartData } from './models'
+import { chartState } from './ChartState.svelte'
+
+export function chart_init(
+	width: number,
+	height: number
+): d3.Selection<SVGSVGElement, unknown, HTMLElement, any> {
+	return d3
+		.select('#chart')
+		.append('svg')
+		.attr('viewBox', [0, 0, width, height])
+		.attr('width', '100%')
+		.attr('height', '100%')
+}
+
+export function update_chart(
+	dynamicChartConfig: chartConfig,
+	svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | null,
+	data: ChartData[]
+): d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | null {
+	if (!svg) return svg
+
+	const xMax = d3.max(data, (dataPoint) => dataPoint.visitors) ?? 0
+
+	const xScale = d3
+		.scaleLinear()
+		.domain([0, xMax * baseChartConfig.xScale])
+		.range([0, dynamicChartConfig.width])
+
+	const yScale = d3
+		.scaleBand()
+		.domain(data.map((dataPoint) => dataPoint.website))
+		.range([0, dynamicChartConfig.height])
+		.paddingInner(baseChartConfig.innerPadding)
+		.paddingOuter(dynamicChartConfig.outerPadding)
+
+	const bars = svg
+		.selectAll<SVGGElement, ChartData>('.bar')
+		.data(data, (dataPoint) => dataPoint.website)
+
+	bars.exit().transition().duration(baseChartConfig.delay).attr('width', 0).remove()
+
+	const newBars = bars
+		.enter()
+		.append('g')
+		.attr('class', 'bar')
+		.attr('transform', (dataPoint: ChartData) => `translate(0, ${yScale(dataPoint.website)})`)
+		.attr('opacity', 0)
+
+	newBars
+		.append('rect')
+		.attr('height', yScale.bandwidth())
+		.attr('fill', (dataPoint: ChartData) => dataPoint.color)
+		.attr('stroke', baseChartConfig.borderColor)
+		.attr('stroke-width', baseChartConfig.borderWidth)
+		.attr('rx', baseChartConfig.borderRadius)
+		.attr('ry', baseChartConfig.borderRadius)
+
+	newBars
+		.append('text')
+		.attr('class', 'name-label')
+		.style(
+			'font-size',
+			dynamicChartConfig.mobile ? baseChartConfig.mobileFontSize : baseChartConfig.notMobileFontSize
+		)
+		.style('font-family', baseChartConfig.fontFamily)
+		.style('fill', baseChartConfig.textColor)
+		.style('text-anchor', 'beginning')
+
+	const merged = newBars.merge(bars)
+
+	merged
+		.transition()
+		.duration(baseChartConfig.delay)
+		.attr('transform', (dataPoint: ChartData) => `translate(1, ${yScale(dataPoint.website)})`)
+		.attr('opacity', 1)
+
+	merged
+		.select('rect')
+		.transition()
+		.duration(baseChartConfig.delay)
+		.attr('width', (dataPoint: ChartData) =>
+			Math.max(dynamicChartConfig.minBarWidth, xScale(dataPoint.visitors))
+		)
+		.attr('height', yScale.bandwidth())
+
+	merged
+		.select('.name-label')
+		.transition()
+		.duration(baseChartConfig.delay)
+		.attr('x', baseChartConfig.xDistance)
+		.attr('y', yScale.bandwidth() / 2)
+		.attr('dy', baseChartConfig.yChange)
+		.text((dataPoint: ChartData) => dataPoint.website)
+
+	return svg
+}
+
+function getMinBarWidth(width: number, height: number): number {
+	if (width < 445) {
+		chartState.setMobileChanged(chartState.getChartConfig().mobile ? false : true)
+
+		chartState.setMobile(true)
+
+		return height < 620 ? 125 : 150
+	}
+
+	if (height < 450) {
+		chartState.setMobile(false)
+
+		return width < 1200 ? 205 : 240
+	}
+
+	if (width < 1200) {
+		chartState.setMobile(true)
+
+		return height < 650 ? 125 : 180
+	}
+
+	chartState.setMobile(false)
+
+	return 320
+}
+
+export function calculateDimensions(
+	container: HTMLDivElement | null,
+	svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | null
+): d3.Selection<SVGSVGElement, unknown, HTMLElement, any> | null {
+	if (!container) return svg
+
+	const containerRect = container.getBoundingClientRect()
+
+	chartState.setOuterPadding(containerRect.height < 430 ? 0.02 : 0.01)
+
+	chartState.setMinBarWidth(getMinBarWidth(containerRect.width, containerRect.height))
+
+	chartState.setWidth(containerRect.width)
+
+    console.log(containerRect.height)
+
+	chartState.setHeight(containerRect.height * baseChartConfig.heightScale)
+
+	if (!svg) return svg
+
+	let dynamicChartConfig = chartState.getChartConfig()
+
+	svg
+		.attr('viewBox', [0, 0, dynamicChartConfig.width, dynamicChartConfig.height])
+		.attr('width', dynamicChartConfig.width)
+		.attr('height', dynamicChartConfig.height)
+
+	return update_chart(dynamicChartConfig, svg, chartState.getData())
+}
