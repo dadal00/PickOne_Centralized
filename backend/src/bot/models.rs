@@ -33,7 +33,7 @@ pub enum ChatMessage {
     #[strum(serialize = "Image too large")]
     ImageTooLarge,
 
-    #[strum(serialize = "Heres your photo:")]
+    #[strum(serialize = "Scan QR or paste link for your photo.")]
     Processed,
 }
 
@@ -44,4 +44,22 @@ pub enum RedisBotAction {
 
     #[strum(serialize = "qr")]
     QRPicture,
+}
+
+type Center = (u32, u32);
+
+pub struct Icon {
+    pub center: Center,
+}
+
+pub struct PhotoBox {
+    pub center: Center,
+    pub max_width: u32,
+    pub max_height: u32,
+}
+
+pub struct Icons {
+    pub pete: Icon,
+    pub tower: Icon,
+    pub fountain: Icon,
 }

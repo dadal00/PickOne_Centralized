@@ -1,67 +1,28 @@
 use super::{
     models::RedisBotAction,
+    preprocessing::{
+        JPEG_HEADER, PHOTO_BACKGROUND, PHOTO_BACKGROUND_SIZE, PHOTO_BOXES, PHOTO_ICONS,
+    },
     redis::{get_bytes, get_vector_of_bytes, insert_formatted_photo, insert_user_photo_bytes},
 };
 use crate::{AppError, AppState};
 use axum::{
     extract::{Path, State},
-    http::{HeaderValue, StatusCode, header::HeaderMap},
+    http::StatusCode,
     response::IntoResponse,
 };
 use futures_util::TryStreamExt;
 use image::{
-    DynamicImage, GenericImageView, ImageFormat, ImageFormat::Jpeg, imageops,
-    imageops::FilterType::Lanczos3, load_from_memory,
+    DynamicImage, GenericImageView, ImageFormat,
+    ImageFormat::{Jpeg, Png},
+    Luma, imageops,
+    imageops::FilterType::Lanczos3,
+    load_from_memory,
 };
-use once_cell::sync::Lazy;
-use std::{env, io::Cursor, sync::Arc};
+use qrcode::QrCode;
+use std::{io::Cursor, sync::Arc};
 use teloxide::{Bot, net::Download, prelude::*, types::FileId};
-use tracing::warn;
 use uuid::Uuid;
-
-static PHOTO_BACKGROUND: Lazy<DynamicImage> =
-    Lazy::new(|| {
-        image::open(env::var("RUST_BOT_BACKGROUND_CONTAINER_PATH").unwrap_or_else(|_| {
-        warn!("Environment variable RUST_BOT_BACKGROUND_CONTAINER_PATH not found, using default");
-        "/assets/photo_strip_background.jpg".to_string()
-    }))
-    .expect("Image failed to load")
-    });
-
-static JPEG_HEADER: Lazy<HeaderMap> = Lazy::new(|| {
-    let mut headers = HeaderMap::new();
-    headers.insert("Content-Type", HeaderValue::from_static("image/jpeg"));
-    headers
-});
-
-struct PhotoBox {
-    center: (u32, u32),
-    max_width: u32,
-    max_height: u32,
-}
-
-const PHOTO_BOXES: [PhotoBox; 4] = [
-    PhotoBox {
-        center: (312, 329),
-        max_width: 449,
-        max_height: 451,
-    },
-    PhotoBox {
-        center: (767, 329),
-        max_width: 449,
-        max_height: 451,
-    },
-    PhotoBox {
-        center: (312, 785),
-        max_width: 449,
-        max_height: 451,
-    },
-    PhotoBox {
-        center: (767, 785),
-        max_width: 449,
-        max_height: 451,
-    },
-];
 
 pub async fn process_photos(
     state: Arc<AppState>,
@@ -81,6 +42,9 @@ pub async fn process_photos(
             box_.center.1,
         );
     }
+
+    let (width, height) = *PHOTO_BACKGROUND_SIZE;
+    overlay_photo(&mut result, &PHOTO_ICONS, width / 2, height / 2);
 
     let qr_id = Uuid::new_v4().to_string();
 
@@ -112,7 +76,12 @@ fn resize_photo(image: &DynamicImage, max_width: u32, max_height: u32) -> Dynami
     )
 }
 
-fn overlay_photo(base: &mut DynamicImage, overlay: &DynamicImage, center_x: u32, center_y: u32) {
+pub fn overlay_photo(
+    base: &mut DynamicImage,
+    overlay: &DynamicImage,
+    center_x: u32,
+    center_y: u32,
+) {
     let (overlay_width, overlay_height) = overlay.dimensions();
     imageops::overlay(
         base,
@@ -178,4 +147,17 @@ pub async fn photo_handler(
         }
         None => Ok((StatusCode::NOT_FOUND, "Not found").into_response()),
     }
+}
+
+pub fn generate_qr_bytes(link: &str) -> Result<Vec<u8>, AppError> {
+    photo_to_bytes(
+        &DynamicImage::ImageLuma8(
+            QrCode::new(link)
+                .expect("QR generation failed")
+                .render::<Luma<u8>>()
+                .max_dimensions(512, 512)
+                .build(),
+        ),
+        Png,
+    )
 }

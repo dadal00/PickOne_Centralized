@@ -1,13 +1,16 @@
 use super::{
     models::{ChatMessage, Command, HandlerResult, RedisBotAction},
-    photo::{download_photo, process_photos},
+    photo::{download_photo, generate_qr_bytes, process_photos},
     redis::get_num_photos,
 };
 use crate::{api::redis::remove_id, config::read_secret, error::AppError, state::AppState};
 use dptree::case;
 use std::{error::Error as stdErr, sync::Arc};
 use teloxide::{
-    dispatching::UpdateHandler, filter_command, prelude::*, types::FileMeta,
+    dispatching::UpdateHandler,
+    filter_command,
+    prelude::*,
+    types::{FileMeta, InputFile},
     utils::command::BotCommands,
 };
 use tracing::info;
@@ -81,21 +84,21 @@ async fn process(bot: Bot, msg: Message, state: Arc<AppState>) -> HandlerResult 
     bot.send_message(msg.chat.id, ChatMessage::Processing.as_ref())
         .await?;
 
-    bot.send_message(
-        msg.chat.id,
-        format!(
-            "{} {}/{}",
-            ChatMessage::Processed.as_ref(),
-            state.config.bot_photo_url,
-            process_photos(
-                state.clone(),
-                RedisBotAction::User,
-                &msg.from.unwrap().id.to_string()
-            )
-            .await?
-        ),
-    )
-    .await?;
+    let link = format!(
+        "{}/{}",
+        state.config.bot_photo_url,
+        process_photos(
+            state.clone(),
+            RedisBotAction::User,
+            &msg.from.unwrap().id.to_string()
+        )
+        .await?
+    );
+
+    bot.send_photo(msg.chat.id, InputFile::memory(generate_qr_bytes(&link)?))
+        .caption(format!("{}\n\n{}", ChatMessage::Processed.as_ref(), &link))
+        .send()
+        .await?;
 
     Ok(())
 }
