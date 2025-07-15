@@ -14,8 +14,6 @@
 	let resizeHandler: () => void
 
 	onMount(() => {
-		container = document.querySelector('.chart-container')
-
 		svg = calculateDimensions(
 			container,
 			chart_init(dynamicChartConfig.width, dynamicChartConfig.height)

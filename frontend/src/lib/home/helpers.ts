@@ -137,8 +137,6 @@ export function calculateDimensions(
 
 	chartState.setWidth(containerRect.width)
 
-    console.log(containerRect.height)
-
 	chartState.setHeight(containerRect.height * baseChartConfig.heightScale)
 
 	if (!svg) return svg
