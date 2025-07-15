@@ -3,12 +3,18 @@
 	import AuthHeader from '$lib/swap/components/auth/AuthHeader.svelte'
 	import TabButton from '$lib/swap/components/auth/TabButton.svelte'
 	import AuthFlow from '$lib/swap/components/auth/AuthFlow.svelte'
+	import { onMount } from 'svelte'
+	import { signout } from '$lib/swap/helpers/auth'
 
 	let activeTab: TabOptions = $state('Login')
 
 	function showTab(tab: TabOptions) {
 		activeTab = tab
 	}
+
+	onMount(() => {
+		signout()
+	})
 </script>
 
 <svelte:head>

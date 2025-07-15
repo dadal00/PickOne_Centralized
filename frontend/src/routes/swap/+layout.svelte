@@ -1,5 +1,4 @@
 <script lang="ts">
-	import '../../app.css'
 	import NavBar from '$lib/swap/components/layout/NavBar.svelte'
 	import Footer from '$lib/swap/components/layout/Footer.svelte'
 	import { PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'

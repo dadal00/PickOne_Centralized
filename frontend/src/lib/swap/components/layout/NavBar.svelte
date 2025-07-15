@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { appState } from '$lib/swap/AppState.svelte'
-	import { signout } from '$lib/swap/helpers/auth'
 	import { Status } from '$lib/swap/models'
 	import { PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
 </script>
@@ -36,7 +35,6 @@
 			<div class="flex items-center space-x-3">
 				<a
 					href={PUBLIC_SVELTE_SWAP_ROOT + '/auth'}
-					onclick={signout}
 					class="border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded"
 					>Sign {appState.getStatus(Status.isSignedIn) ? 'Out' : 'In'}</a
 				>
