@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as d3 from 'd3'
 	import { onDestroy, onMount } from 'svelte'
-	import { calculateDimensions, chart_init, update_chart } from '../helpers'
+	import { calculateDimensions, chart_init, update_chart } from '../helpers/chartHelpers'
 	import { type chartConfig, type ChartData } from '../models'
 	import { chartState } from '../ChartState.svelte'
 

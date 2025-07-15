@@ -1,6 +1,7 @@
 import * as d3 from 'd3'
-import { baseChartConfig, type chartConfig, type ChartData } from './models'
-import { chartState } from './ChartState.svelte'
+import { baseChartConfig, type chartConfig, type ChartData } from '../models'
+import { chartState } from '../ChartState.svelte'
+import { format_number } from './utils'
 
 export function chart_init(
 	width: number,
@@ -57,6 +58,14 @@ export function update_chart(
 		.attr('rx', baseChartConfig.borderRadius)
 		.attr('ry', baseChartConfig.borderRadius)
 
+    newBars
+        .append('text')
+        .attr('class', 'value-label')
+        .style('font-size', dynamicChartConfig.mobile ? baseChartConfig.mobileFontSize : baseChartConfig.notMobileFontSize)
+        .style('font-family', baseChartConfig.fontFamily)
+        .style('fill', 'white')
+        .style('text-anchor', dynamicChartConfig.mobile ? 'beginning' : 'end')
+
 	newBars
 		.append('text')
 		.attr('class', 'name-label')
@@ -85,12 +94,24 @@ export function update_chart(
 		)
 		.attr('height', yScale.bandwidth())
 
+    merged
+        .select('.value-label')
+        .transition()
+        .duration(baseChartConfig.delay)
+        .attr('x', (dataPoint: ChartData) =>
+			dynamicChartConfig.mobile
+			  ? baseChartConfig.xDistance
+			  : Math.max(dynamicChartConfig.minBarWidth, xScale(dataPoint.visitors)) - 20)
+        .attr('y', dynamicChartConfig.mobile ? yScale.bandwidth() / 2 + 20 : yScale.bandwidth() / 2)
+        .attr('dy', baseChartConfig.yChange)
+        .text((dataPoint: ChartData) => format_number(dataPoint.visitors))
+
 	merged
 		.select('.name-label')
 		.transition()
 		.duration(baseChartConfig.delay)
 		.attr('x', baseChartConfig.xDistance)
-		.attr('y', yScale.bandwidth() / 2)
+		.attr('y',  dynamicChartConfig.mobile ? yScale.bandwidth() / 2 - 20 : yScale.bandwidth() / 2)
 		.attr('dy', baseChartConfig.yChange)
 		.text((dataPoint: ChartData) => dataPoint.website)
 
@@ -107,16 +128,21 @@ function getMinBarWidth(width: number, height: number): number {
 	}
 
 	if (height < 450) {
+		chartState.setMobileChanged(chartState.getChartConfig().mobile ? true : false)
+
 		chartState.setMobile(false)
 
 		return width < 1200 ? 205 : 240
 	}
 
 	if (width < 1200) {
+		chartState.setMobileChanged(chartState.getChartConfig().mobile ? false : true)
+
 		chartState.setMobile(true)
 
 		return height < 650 ? 125 : 180
 	}
+	chartState.setMobileChanged(chartState.getChartConfig().mobile ? true : false)
 
 	chartState.setMobile(false)
 
