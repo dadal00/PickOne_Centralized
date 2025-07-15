@@ -60,7 +60,7 @@ pub fn spawn_code_task(
                 Ok(None) => return,
                 Err(_) => return,
             }
-            
+
             if let Ok(is_locked) = is_redis_locked(
                 state.clone(),
                 &website_path,

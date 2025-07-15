@@ -97,7 +97,7 @@ pub async fn verify_token(
     Ok(None)
 }
 
-pub fn validate_api_token(headers: HeaderMap) -> bool {
+pub fn verify_api_token(headers: HeaderMap) -> bool {
     let jwt = get_cookie(&headers, "api_token");
 
     if jwt.is_none() {
