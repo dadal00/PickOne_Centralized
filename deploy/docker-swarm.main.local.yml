@@ -67,6 +67,8 @@ services:
     image: boiler_rust:latest
     networks:
       - main_net
+    volumes:
+      - ${RUST_BOT_BACKGROUND_DEVICE_PATH}:${RUST_BOT_BACKGROUND_CONTAINER_PATH}
     deploy:
       replicas: 1
       restart_policy:
@@ -107,6 +109,11 @@ services:
       - PUBLIC_MIN_PASSWORD_LENGTH=${PUBLIC_MIN_PASSWORD_LENGTH}
       - SVELTE_URL=${SVELTE_URL}
       - MEILI_URL=${MEILI_URL}
+      - RUST_BOT_NUM_PICTURES=${RUST_BOT_NUM_PICTURES}
+      - RUST_BOT_PICTURES_TTL=${RUST_BOT_PICTURES_TTL}
+      - RUST_BOT_MAX_BYTES=${RUST_BOT_MAX_BYTES}
+      - RUST_BOT_PHOTO_URL=${RUST_BOT_PHOTO_URL}
+      - RUST_BOT_BACKGROUND_CONTAINER_PATH=${RUST_BOT_BACKGROUND_CONTAINER_PATH}
 
   svelte:
     image: boiler_svelte:latest

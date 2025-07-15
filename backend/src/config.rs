@@ -19,10 +19,21 @@ pub struct Config {
     pub max_codes: u8,
     pub max_codes_duration_seconds: u16,
     pub max_items: u8,
+
+    pub bot_num_pictures: u8,
+    pub bot_pictures_ttl: u32,
+    pub bot_max_bytes: u32,
+    pub bot_photo_url: String,
 }
 
 impl Config {
     pub fn load() -> Result<Self, AppError> {
+        let bot_photo_url = var("RUST_BOT_PHOTO_URL")
+            .inspect_err(|_| {
+                info!("RUST_BOT_PHOTO_URL not set, using default");
+            })
+            .unwrap_or_else(|_| "https://boiler/photos".into());
+
         let rust_port = var("RUST_PORT")
             .inspect_err(|_| {
                 info!("RUST_PORT not set, using default");
@@ -137,6 +148,32 @@ impl Config {
             })
             .unwrap_or_else(|_| "its so over".into());
 
+        // Rust Bot Variables
+
+        let bot_num_pictures = var("RUST_BOT_NUM_PICTURES")
+            .inspect_err(|_| {
+                info!("RUST_BOT_NUM_PICTURES not set, using default");
+            })
+            .unwrap_or_else(|_| "4".into())
+            .parse()
+            .map_err(|_| AppError::Config("Invalid RUST_BOT_NUM_PICTURES value".into()))?;
+
+        let bot_pictures_ttl = var("RUST_BOT_PICTURES_TTL")
+            .inspect_err(|_| {
+                info!("RUST_BOT_PICTURES_TTL not set, using default");
+            })
+            .unwrap_or_else(|_| "86400".into())
+            .parse()
+            .map_err(|_| AppError::Config("Invalid RUST_BOT_PICTURES_TTL value".into()))?;
+
+        let bot_max_bytes = var("RUST_BOT_MAX_BYTES")
+            .inspect_err(|_| {
+                info!("RUST_BOT_MAX_BYTES not set, using default");
+            })
+            .unwrap_or_else(|_| "5_242_880".into())
+            .parse()
+            .map_err(|_| AppError::Config("Invalid RUST_BOT_MAX_BYTES value".into()))?;
+
         Ok(Self {
             rust_port,
             svelte_url,
@@ -153,6 +190,10 @@ impl Config {
             max_codes,
             max_codes_duration_seconds,
             max_items,
+            bot_num_pictures,
+            bot_pictures_ttl,
+            bot_max_bytes,
+            bot_photo_url,
         })
     }
 }

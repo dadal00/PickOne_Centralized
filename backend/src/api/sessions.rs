@@ -40,9 +40,19 @@ pub static CLEARED_COOKIES_SWAP: Lazy<cookieCookieJar> = Lazy::new(|| {
     jar
 });
 
-pub fn generate_cookie(key: &str, value: &str, ttl: i64, website_path: WebsitePath) -> HeaderMap {
+pub fn generate_cookie(
+    key: &str,
+    value: &str,
+    ttl: i64,
+    website_path: WebsitePath,
+) -> Result<HeaderMap, AppError> {
     let mut jar = match website_path {
         WebsitePath::BoilerSwap => CLEARED_COOKIES_SWAP.clone(),
+        WebsitePath::Photos => {
+            return Err(AppError::Config(
+                "Invalid path for cookie generation".into(),
+            ));
+        }
     };
 
     let new_cookie = Cookie::build((key.to_owned(), value.to_owned()))
@@ -63,7 +73,7 @@ pub fn generate_cookie(key: &str, value: &str, ttl: i64, website_path: WebsitePa
         );
     }
 
-    headers
+    Ok(headers)
 }
 
 pub fn get_cookie(headers: &HeaderMap, key: &str) -> Option<String> {
@@ -121,12 +131,12 @@ pub async fn create_temporary_session(
     )
     .await?;
 
-    Ok(generate_cookie(
+    generate_cookie(
         redis_action.as_ref(),
         &id,
         state.config.temporary_session_duration_seconds.into(),
         website_path,
-    ))
+    )
 }
 
 pub async fn create_session(
@@ -152,10 +162,10 @@ pub async fn create_session(
     )
     .await?;
 
-    Ok(generate_cookie(
+    generate_cookie(
         redis_action.as_ref(),
         &session_id,
         state.config.session_duration_seconds.into(),
         website_path,
-    ))
+    )
 }

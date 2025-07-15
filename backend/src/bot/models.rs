@@ -1,11 +1,6 @@
-use super::state::BotState;
 use std::error::Error as stdErr;
 use strum_macros::{AsRefStr, EnumString};
-use teloxide::{
-    dispatching::dialogue::InMemStorage, prelude::Dialogue, utils::command::BotCommands,
-};
-
-pub type ChatDialogue = Dialogue<BotState, InMemStorage<BotState>>;
+use teloxide::utils::command::BotCommands;
 
 pub type HandlerResult = Result<(), Box<dyn stdErr + Send + Sync>>;
 
@@ -29,9 +24,24 @@ pub enum ChatMessage {
     #[strum(serialize = "/4 image(s) sent")]
     Received,
 
-    #[strum(serialize = " image(s) cleared")]
+    #[strum(serialize = "All images cleared")]
     Cleared,
 
-    #[strum(serialize = "WIP Processing...")]
+    #[strum(serialize = "Processing...")]
     Processing,
+
+    #[strum(serialize = "Image too large")]
+    ImageTooLarge,
+
+    #[strum(serialize = "Heres your photo:")]
+    Processed,
+}
+
+#[derive(EnumString, AsRefStr, PartialEq)]
+pub enum RedisBotAction {
+    #[strum(serialize = "user_id")]
+    User,
+
+    #[strum(serialize = "qr")]
+    QRPicture,
 }

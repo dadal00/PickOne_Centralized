@@ -3,6 +3,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use image::ImageError;
 use lettre::{
     address::AddressError, error::Error as lettreGeneralError,
     transport::smtp::Error as lettreTransportError,
@@ -10,6 +11,7 @@ use lettre::{
 use meilisearch_sdk::errors::Error as meiliError;
 use prometheus::Error as prometheusError;
 use redis::RedisError;
+use reqwest::Error as reqwestError;
 use scylla::{
     deserialize::DeserializationError,
     errors::{
@@ -19,6 +21,7 @@ use scylla::{
 };
 use serde_json::Error as serdeJsonError;
 use std::{env::VarError, io::Error as IOError, num::ParseIntError, string::FromUtf8Error};
+use teloxide::RequestError as teloxideRequestError;
 use thiserror::Error;
 use tokio::task::JoinError;
 use tokio_cron_scheduler::JobSchedulerError;
@@ -91,6 +94,15 @@ pub enum AppError {
 
     #[error("TokioCron error: {0}")]
     TokioCron(#[from] JobSchedulerError),
+
+    #[error("ImageProcessing error: {0}")]
+    ImageProcessing(#[from] ImageError),
+
+    #[error("TeloxideRequest error: {0}")]
+    TeloxideRequest(#[from] teloxideRequestError),
+
+    #[error("Reqwest error: {0}")]
+    Reqwest(#[from] reqwestError),
 }
 
 impl IntoResponse for AppError {

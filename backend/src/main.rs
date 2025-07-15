@@ -8,7 +8,7 @@ use crate::{
         models::{RedisAction, WebsitePath},
         schema::{KEYSPACE, columns::items, tables},
     },
-    bot::chat::start_bot,
+    bot::{chat::start_bot, photo::photo_handler},
     error::AppError,
     metrics::metrics_handler,
     signals::shutdown_signal,
@@ -42,13 +42,11 @@ async fn main() -> Result<(), AppError> {
         )
         .init();
 
-    info!("Starting bot...");
-
-    start_bot().await?;
-
     info!("Starting server...");
 
     let (state, meili_reindex_future) = AppState::new().await?;
+
+    start_bot(state.clone()).await?;
 
     info!("Server configuration");
     info!("rust_port = {}", state.config.rust_port);
@@ -87,6 +85,10 @@ async fn main() -> Result<(), AppError> {
         .route(
             &format!("/{}/api/resend", WebsitePath::BoilerSwap.as_ref()),
             post(resend_handler),
+        )
+        .route(
+            &format!("/{}/:id", WebsitePath::Photos.as_ref()),
+            get(photo_handler),
         )
         .route("/metrics", get(metrics_handler))
         .route_layer(middleware::from_fn_with_state(

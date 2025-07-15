@@ -9,8 +9,8 @@ use super::{
     twofactor::{CODE_REGEX, generate_code},
     utilities::{get_hashed_ip, get_key},
     verify::{
-        CODE_LENGTH, validate_account, validate_api_token, validate_email, validate_item,
-        validate_password, verify_token,
+        CODE_LENGTH, validate_account, validate_email, validate_item, validate_password,
+        verify_api_token, verify_token,
     },
 };
 use crate::{AppError, state::AppState};
@@ -33,6 +33,14 @@ pub async fn api_token_check(
     request: Request,
     next: Next,
 ) -> Result<impl IntoResponse, AppError> {
+    if request
+        .uri()
+        .path()
+        .starts_with(&format!("/{}/", WebsitePath::Photos.as_ref()))
+    {
+        return Ok(next.run(request).await);
+    }
+
     let origin = headers.get(ORIGIN);
 
     if origin.is_none() {
@@ -43,9 +51,10 @@ pub async fn api_token_check(
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
     }
 
-    if validate_api_token(headers) {
+    if verify_api_token(headers) {
         return Ok(next.run(request).await);
     }
+
     Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response())
 }
 

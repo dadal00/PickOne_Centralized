@@ -197,6 +197,9 @@ pub type CronItemRow<'a> = (Uuid, NaiveDate);
 pub enum WebsitePath {
     #[strum(serialize = "swap")]
     BoilerSwap,
+
+    #[strum(serialize = "photos")]
+    Photos,
 }
 
 pub struct VerifiedTokenResult {

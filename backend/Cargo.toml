@@ -9,9 +9,11 @@ argon2 = "0.5.3"
 async-trait = "0.1.88"
 axum = { version = "0.7" }
 axum-extra = { version = "0.10.1", features = ["cookie"] }
+bytes = "1.10.1"
 chrono = { version = "0.4.41", features = ["serde"] }
 cookie = "0.18.1"
 futures-util = "0.3.31"
+image = "0.25.6"
 jsonwebtoken = "9.3.1"
 lettre = { version = "0.11.17", features = ["tokio1", "smtp-transport", "builder", "tokio1-native-tls"] }
 meilisearch-sdk = "0.28.0"
@@ -21,6 +23,7 @@ prometheus = "0.13"
 rand = "0.8"
 redis = { version = "0.32.0", features = ["tokio-comp", "connection-manager"] }
 regex = "1"
+reqwest = "0.12.22"
 rustrict = "0.7.35"
 scylla = { version = "1.2.0", features = ["chrono-04"] }
 scylla-cdc = "0.4.0"
