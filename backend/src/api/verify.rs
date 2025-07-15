@@ -21,10 +21,10 @@ pub static EMAIL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^.+@purdue\.edu$
 pub static VALIDATION: Lazy<Validation> = Lazy::new(|| Validation::new(Algorithm::HS256));
 pub static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
     DecodingKey::from_secret(
-        read_to_string("/run/secrets/API_TOKEN")
+        read_to_string("/run/secrets/SWAP_API_TOKEN")
             .map(|s| s.trim().to_string())
             .map_err(|e| {
-                warn!("Failed to read API_TOKEN from file: {}", e);
+                warn!("Failed to read SWAP_API_TOKEN from file: {}", e);
                 AppError::IO(e)
             })
             .unwrap()

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation'
-	import { PUBLIC_BACKEND_URL, PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
+	import { PUBLIC_SWAP_BACKEND_PATH, PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
 	import { appState } from '$lib/swap/AppState.svelte'
 	import { type Item } from '$lib/swap/models'
 	import { onDestroy, onMount } from 'svelte'
@@ -32,7 +32,7 @@
 		}
 
 		appState.nowProductLimited()
-		const response = await fetch(PUBLIC_BACKEND_URL + '/post-item', {
+		const response = await fetch(PUBLIC_SWAP_BACKEND_PATH + '/post-item', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			credentials: 'include',

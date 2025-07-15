@@ -1,5 +1,6 @@
 import type { Handle } from '@sveltejs/kit'
 import { env } from '$env/dynamic/private'
+import { PUBLIC_SWAP_BACKEND_PATH } from '$env/static/public'
 import { SignJWT } from 'jose'
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -11,10 +12,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 			.setProtectedHeader({ alg: 'HS256' })
 			.setIssuedAt()
 			.setExpirationTime('5m')
-			.sign(new TextEncoder().encode(env.API_TOKEN))
+			.sign(new TextEncoder().encode(env.SWAP_API_TOKEN))
 
 		event.cookies.set('api_token', jwt, {
-			path: '/swap/api',
+			path: PUBLIC_SWAP_BACKEND_PATH,
 			httpOnly: true,
 			sameSite: 'strict',
 			secure: true,

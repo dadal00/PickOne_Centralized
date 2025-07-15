@@ -6,10 +6,10 @@
 		output stdout
 	}
 	security {
-		authorization policy verifyAPI {
+		authorization policy verifySwapAPI {
 			allow roles anonymous guest
 			set token sources cookie
-			crypto key verify {$API_TOKEN}
+			crypto key verify {$SWAP_API_TOKEN}
 			crypto key token name api_token
 		}
 
@@ -32,7 +32,7 @@
 	}
 
 	handle /swap/api/* {
-		authorize with verifyAPI
+		authorize with verifySwapAPI
 		reverse_proxy {$RUST_NAME}:{$RUST_PORT}
 	}
 
@@ -48,7 +48,7 @@
 		Cross-Origin-Opener-Policy "same-origin"
 		Cross-Origin-Embedder-Policy "require-corp"
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://boiler; frame-ancestors 'none'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://{$CADDY_DOMAIN}; frame-ancestors 'none'"
 	}
 
 	log {

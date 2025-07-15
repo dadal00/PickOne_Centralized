@@ -7,7 +7,7 @@ services:
   boiler_svelte:
     build:
       args:
-        - PUBLIC_BACKEND_URL=${PUBLIC_BACKEND_URL}
+        - PUBLIC_SWAP_BACKEND_PATH=${PUBLIC_SWAP_BACKEND_PATH}
         - PUBLIC_MAX_CHARS=${PUBLIC_MAX_CHARS}
         - PUBLIC_CODE_LENGTH=${PUBLIC_CODE_LENGTH}
         - PUBLIC_MEILI_KEY=${PUBLIC_MEILI_KEY}

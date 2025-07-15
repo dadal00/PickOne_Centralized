@@ -1,6 +1,6 @@
 import { goto } from '$app/navigation'
 import {
-	PUBLIC_BACKEND_URL,
+	PUBLIC_SWAP_BACKEND_PATH,
 	PUBLIC_CODE_LENGTH,
 	PUBLIC_MIN_PASSWORD_LENGTH,
 	PUBLIC_SVELTE_SWAP_ROOT
@@ -172,7 +172,7 @@ export async function signout() {
 
 	appState.nowLimited()
 
-	const response = await fetch(PUBLIC_BACKEND_URL + '/delete', {
+	const response = await fetch(PUBLIC_SWAP_BACKEND_PATH + '/delete', {
 		method: 'DELETE',
 		credentials: 'include'
 	})
@@ -194,7 +194,7 @@ export async function resend(resendSeconds: number) {
 
 	appState.nowLimited()
 
-	const response = await fetch(PUBLIC_BACKEND_URL + '/resend', {
+	const response = await fetch(PUBLIC_SWAP_BACKEND_PATH + '/resend', {
 		method: 'POST',
 		credentials: 'include'
 	})

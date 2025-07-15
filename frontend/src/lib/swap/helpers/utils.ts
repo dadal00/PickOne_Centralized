@@ -1,10 +1,10 @@
-import { PUBLIC_BACKEND_URL } from '$env/static/public'
+import { PUBLIC_SWAP_BACKEND_PATH } from '$env/static/public'
 import { appState } from '$lib/swap/AppState.svelte'
 import type { Account, ExpirationColor, TokenPayload } from '../models'
 import DOMPurify from 'dompurify'
 
 export async function fetchBackend(path: string, payload: Account | TokenPayload) {
-	const response = await fetch(PUBLIC_BACKEND_URL + path, {
+	const response = await fetch(PUBLIC_SWAP_BACKEND_PATH + path, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json'

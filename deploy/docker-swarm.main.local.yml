@@ -79,7 +79,7 @@ services:
       - RUST_FROM_EMAIL
       - RUST_FROM_EMAIL_PASSWORD
       - RUST_FROM_EMAIL_SERVER
-      - API_TOKEN
+      - SWAP_API_TOKEN
       - MEILI_ADMIN_KEY
     logging:
       driver: loki
@@ -124,9 +124,9 @@ services:
     networks:
       - main_net
     secrets:
-      - API_TOKEN
+      - SWAP_API_TOKEN
       - SEARCH_TOKEN
-    command: sh -c "export API_TOKEN=$$(cat /run/secrets/API_TOKEN) && export SEARCH_TOKEN=$$(cat /run/secrets/SEARCH_TOKEN) && node build"
+    command: sh -c "export SWAP_API_TOKEN=$$(cat /run/secrets/SWAP_API_TOKEN) && export SEARCH_TOKEN=$$(cat /run/secrets/SEARCH_TOKEN) && node build"
     deploy:
       mode: global
       restart_policy:
@@ -141,7 +141,7 @@ services:
     networks:
       - main_net
     secrets:
-      - API_TOKEN
+      - SWAP_API_TOKEN
       - SEARCH_TOKEN
     ports:
       - "80:80"
@@ -158,7 +158,7 @@ services:
         loki-batch-size: "10"
         loki-timeout: "10s"
         loki-retries: "3"
-    command: sh -c "export API_TOKEN=$$(cat /run/secrets/API_TOKEN) && export SEARCH_TOKEN=$$(cat /run/secrets/SEARCH_TOKEN) && caddy run --config /etc/caddy/Caddyfile"
+    command: sh -c "export SWAP_API_TOKEN=$$(cat /run/secrets/SWAP_API_TOKEN) && export SEARCH_TOKEN=$$(cat /run/secrets/SEARCH_TOKEN) && caddy run --config /etc/caddy/Caddyfile"
     environment:
       - CADDY_LOG_ROTATE_DAYS=356
       - CADDY_LOG_ROTATE_SIZE=10000
@@ -185,7 +185,7 @@ secrets:
     external: true
   RUST_FROM_EMAIL_SERVER:
     external: true
-  API_TOKEN:
+  SWAP_API_TOKEN:
     external: true
   MEILI_MASTER_KEY:
     external: true
