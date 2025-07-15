@@ -58,13 +58,16 @@ export function update_chart(
 		.attr('rx', baseChartConfig.borderRadius)
 		.attr('ry', baseChartConfig.borderRadius)
 
-    newBars
-        .append('text')
-        .attr('class', 'value-label')
-        .style('font-size', dynamicChartConfig.mobile ? baseChartConfig.mobileFontSize : baseChartConfig.notMobileFontSize)
-        .style('font-family', baseChartConfig.fontFamily)
-        .style('fill', 'white')
-        .style('text-anchor', dynamicChartConfig.mobile ? 'beginning' : 'end')
+	newBars
+		.append('text')
+		.attr('class', 'value-label')
+		.style(
+			'font-size',
+			dynamicChartConfig.mobile ? baseChartConfig.mobileFontSize : baseChartConfig.notMobileFontSize
+		)
+		.style('font-family', baseChartConfig.fontFamily)
+		.style('fill', 'white')
+		.style('text-anchor', dynamicChartConfig.mobile ? 'beginning' : 'end')
 
 	newBars
 		.append('text')
@@ -94,24 +97,25 @@ export function update_chart(
 		)
 		.attr('height', yScale.bandwidth())
 
-    merged
-        .select('.value-label')
-        .transition()
-        .duration(baseChartConfig.delay)
-        .attr('x', (dataPoint: ChartData) =>
+	merged
+		.select('.value-label')
+		.transition()
+		.duration(baseChartConfig.delay)
+		.attr('x', (dataPoint: ChartData) =>
 			dynamicChartConfig.mobile
-			  ? baseChartConfig.xDistance
-			  : Math.max(dynamicChartConfig.minBarWidth, xScale(dataPoint.visitors)) - 20)
-        .attr('y', dynamicChartConfig.mobile ? yScale.bandwidth() / 2 + 20 : yScale.bandwidth() / 2)
-        .attr('dy', baseChartConfig.yChange)
-        .text((dataPoint: ChartData) => format_number(dataPoint.visitors))
+				? baseChartConfig.xDistance
+				: Math.max(dynamicChartConfig.minBarWidth, xScale(dataPoint.visitors)) - 20
+		)
+		.attr('y', dynamicChartConfig.mobile ? yScale.bandwidth() / 2 + 20 : yScale.bandwidth() / 2)
+		.attr('dy', baseChartConfig.yChange)
+		.text((dataPoint: ChartData) => format_number(dataPoint.visitors))
 
 	merged
 		.select('.name-label')
 		.transition()
 		.duration(baseChartConfig.delay)
 		.attr('x', baseChartConfig.xDistance)
-		.attr('y',  dynamicChartConfig.mobile ? yScale.bandwidth() / 2 - 20 : yScale.bandwidth() / 2)
+		.attr('y', dynamicChartConfig.mobile ? yScale.bandwidth() / 2 - 20 : yScale.bandwidth() / 2)
 		.attr('dy', baseChartConfig.yChange)
 		.text((dataPoint: ChartData) => dataPoint.website)
 

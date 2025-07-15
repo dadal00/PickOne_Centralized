@@ -14,12 +14,14 @@
 	let resizeHandler: () => void
 
 	onMount(() => {
-		svg = calculateDimensions(
-			container,
-			chart_init(dynamicChartConfig.width, dynamicChartConfig.height)
+		svg = update_chart(
+			dynamicChartConfig,
+			calculateDimensions(
+				container,
+				chart_init(dynamicChartConfig.width, dynamicChartConfig.height)
+			),
+			data
 		)
-
-		svg = update_chart(dynamicChartConfig, svg, data)
 
 		resizeHandler = () => {
 			svg = calculateDimensions(container, svg)
@@ -37,13 +39,16 @@
 	$effect(() => {
 		if (dynamicChartConfig.mobileChanged) {
 			svg?.remove()
+
 			svg = update_chart(
 				dynamicChartConfig,
 				chart_init(dynamicChartConfig.width, dynamicChartConfig.height),
 				data
 			)
+
 			return
 		}
+
 		if (svg) {
 			svg = update_chart(dynamicChartConfig, svg, data)
 		}
@@ -52,8 +57,10 @@
 	onDestroy(() => {
 		if (resizeObserver) {
 			resizeObserver.disconnect()
+
 			window.removeEventListener('resize', resizeHandler)
 		}
+
 		svg?.remove()
 	})
 </script>
