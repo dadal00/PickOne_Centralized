@@ -1,10 +1,40 @@
+import { PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
+
 export type ChartData = {
 	website: Website
 	visitors: number
-	color: string
 }
 
-type Website = 'BoilerSwap' | 'BoilerCuts' | 'Voting' | 'Home'
+type WebsiteMeta = {
+	label: string
+	color: string
+	link: string
+}
+
+export const websiteMeta: Record<Website, WebsiteMeta> = {
+	home: {
+		label: 'Home',
+		color: 'red',
+		link: '/'
+	},
+	photos: {
+		label: 'Cut',
+		color: 'blue',
+		link: 'https://t.me/boilercuts_bot'
+	},
+	swap: {
+		label: 'Swap',
+		color: 'green',
+		link: PUBLIC_SVELTE_SWAP_ROOT
+	},
+	voting: {
+		label: 'Vote',
+		color: 'orange',
+		link: '/'
+	}
+}
+
+type Website = 'swap' | 'photos' | 'voting' | 'home'
 
 export type chartConfig = {
 	width: number

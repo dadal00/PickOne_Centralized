@@ -115,6 +115,8 @@ async fn listen(bot: Bot, msg: Message, state: Arc<AppState>) -> HandlerResult {
 
     let file: &FileMeta = &photos.expect("is_none failed").last().unwrap().file;
 
+    state.metrics.bot_image_size_bytes.observe(file.size as f64);
+
     if file.size > state.config.bot_max_bytes {
         bot.send_message(msg.chat.id, ChatMessage::ImageTooLarge.as_ref())
             .await?;

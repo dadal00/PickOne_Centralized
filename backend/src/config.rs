@@ -24,15 +24,19 @@ pub struct Config {
     pub bot_pictures_ttl: u32,
     pub bot_max_bytes: u32,
     pub bot_photo_url: String,
+
+    pub home_limit_ms: u8,
 }
 
 impl Config {
     pub fn load() -> Result<Self, AppError> {
-        let bot_photo_url = var("RUST_BOT_PHOTO_URL")
+        let home_limit_ms = var("RUST_HOME_LIMIT_MS")
             .inspect_err(|_| {
-                info!("RUST_BOT_PHOTO_URL not set, using default");
+                info!("RUST_HOME_LIMIT_MS not set, using default");
             })
-            .unwrap_or_else(|_| "https://boiler/photos".into());
+            .unwrap_or_else(|_| "50".into())
+            .parse()
+            .map_err(|_| AppError::Config("Invalid RUST_HOME_LIMIT_MS value".into()))?;
 
         let rust_port = var("RUST_PORT")
             .inspect_err(|_| {
@@ -174,6 +178,12 @@ impl Config {
             .parse()
             .map_err(|_| AppError::Config("Invalid RUST_BOT_MAX_BYTES value".into()))?;
 
+        let bot_photo_url = var("RUST_BOT_PHOTO_URL")
+            .inspect_err(|_| {
+                info!("RUST_BOT_PHOTO_URL not set, using default");
+            })
+            .unwrap_or_else(|_| "https://boiler/photos".into());
+
         Ok(Self {
             rust_port,
             svelte_url,
@@ -194,6 +204,7 @@ impl Config {
             bot_pictures_ttl,
             bot_max_bytes,
             bot_photo_url,
+            home_limit_ms,
         })
     }
 }

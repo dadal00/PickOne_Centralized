@@ -53,6 +53,11 @@ pub fn generate_cookie(
                 "Invalid path for cookie generation".into(),
             ));
         }
+        WebsitePath::Home => {
+            return Err(AppError::Config(
+                "Invalid path for cookie generation".into(),
+            ));
+        }
     };
 
     let new_cookie = Cookie::build((key.to_owned(), value.to_owned()))

@@ -4,8 +4,10 @@
 	import { calculateDimensions, chart_init, update_chart } from '../helpers/chartHelpers'
 	import { type chartConfig, type ChartData } from '../models'
 	import { chartState } from '../ChartState.svelte'
+	import { fetch_visitors } from '../helpers/utils'
 
 	const data: ChartData[] = $derived(chartState.getData())
+
 	const dynamicChartConfig: chartConfig = $derived(chartState.getChartConfig())
 
 	let container: HTMLDivElement | null = null
@@ -13,7 +15,9 @@
 	let resizeObserver: ResizeObserver | null = null
 	let resizeHandler: () => void
 
-	onMount(() => {
+	onMount(async () => {
+		await fetch_visitors()
+
 		svg = update_chart(
 			dynamicChartConfig,
 			calculateDimensions(

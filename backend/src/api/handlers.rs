@@ -3,7 +3,7 @@ use super::{
     models::{Account, Action, ItemPayload, RedisAccount, RedisAction, Token, WebsitePath},
     redis::{
         clear_all_keys, create_redis_account, get_redis_account, handle_item_insertion,
-        increment_lock_key, is_redis_locked, remove_id,
+        increment_lock_key, is_redis_locked, is_temporarily_locked_ms, remove_id,
     },
     sessions::{create_session, create_temporary_session, generate_cookie, get_cookie},
     twofactor::{CODE_REGEX, generate_code},
@@ -13,7 +13,7 @@ use super::{
         verify_api_token, verify_token,
     },
 };
-use crate::{AppError, state::AppState};
+use crate::{AppError, AppState, metrics::get_visitors};
 use axum::{
     Json,
     extract::{ConnectInfo, Request, State},
@@ -27,6 +27,26 @@ use axum::{
 use redis::AsyncTypedCommands;
 use std::{net::SocketAddr, sync::Arc};
 
+pub async fn visitors_handler(
+    headers: HeaderMap,
+    ConnectInfo(address): ConnectInfo<SocketAddr>,
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    if is_temporarily_locked_ms(
+        state.clone(),
+        WebsitePath::Home.as_ref(),
+        RedisAction::LockedTemporary.as_ref(),
+        &get_hashed_ip(&headers, address.ip()),
+        state.config.home_limit_ms.into(),
+    )
+    .await?
+    {
+        return Ok((StatusCode::UNAUTHORIZED, "Too many requests from your ip").into_response());
+    }
+
+    Ok((StatusCode::OK, get_visitors(state.clone())).into_response())
+}
+
 pub async fn api_token_check(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
@@ -38,6 +58,8 @@ pub async fn api_token_check(
         .path()
         .starts_with(&format!("/{}/", WebsitePath::Photos.as_ref()))
     {
+        state.metrics.bot_visitors.inc();
+
         return Ok(next.run(request).await);
     }
 
@@ -51,7 +73,21 @@ pub async fn api_token_check(
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
     }
 
-    if verify_api_token(headers) {
+    let website_path = match request.uri().path() {
+        path if path.starts_with(&format!("/{}/api", WebsitePath::BoilerSwap.as_ref())) => {
+            state.metrics.swap_visitors.inc();
+
+            WebsitePath::BoilerSwap
+        }
+        path if path.starts_with(&format!("/{}/api", WebsitePath::Home.as_ref())) => {
+            state.metrics.home_visitors.inc();
+
+            WebsitePath::Home
+        }
+        _ => return Ok((StatusCode::UNAUTHORIZED, "Invalid path").into_response()),
+    };
+
+    if verify_api_token(headers, website_path) {
         return Ok(next.run(request).await);
     }
 

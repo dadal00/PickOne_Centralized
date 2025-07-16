@@ -3,7 +3,7 @@ use crate::{
         database::start_cdc,
         handlers::{
             api_token_check, authenticate_handler, delete_handler, forgot_handler,
-            post_item_handler, resend_handler, verify_handler,
+            post_item_handler, resend_handler, verify_handler, visitors_handler,
         },
         models::{RedisAction, WebsitePath},
         schema::{KEYSPACE, columns::items, tables},
@@ -62,6 +62,10 @@ async fn main() -> Result<(), AppError> {
         .max_age(Duration::from_secs(60 * 60));
 
     let app = Router::new()
+        .route(
+            &format!("/{}/api/visitors", WebsitePath::Home.as_ref()),
+            post(visitors_handler),
+        )
         .route(
             &format!("/{}/api/authenticate", WebsitePath::BoilerSwap.as_ref()),
             post(authenticate_handler),

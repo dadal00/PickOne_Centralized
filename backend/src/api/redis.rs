@@ -420,3 +420,22 @@ pub async fn clear_all_keys(
 
     Ok(())
 }
+
+pub async fn is_temporarily_locked_ms(
+    state: Arc<AppState>,
+    website_path: &str,
+    key: &str,
+    id: &str,
+    ttl_ms: i64,
+) -> Result<bool, AppError> {
+    let result: Option<String> = redis::cmd("SET")
+        .arg(format!("{}:{}:{}", website_path, key, id))
+        .arg("1")
+        .arg("NX")
+        .arg("PX")
+        .arg(ttl_ms)
+        .query_async(&mut state.redis_connection_manager.clone())
+        .await?;
+
+    Ok(result.is_none())
+}

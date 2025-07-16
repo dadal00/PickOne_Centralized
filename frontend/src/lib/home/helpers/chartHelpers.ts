@@ -1,5 +1,5 @@
 import * as d3 from 'd3'
-import { baseChartConfig, type chartConfig, type ChartData } from '../models'
+import { baseChartConfig, websiteMeta, type chartConfig, type ChartData } from '../models'
 import { chartState } from '../ChartState.svelte'
 import { format_number } from './utils'
 
@@ -44,6 +44,9 @@ export function update_chart(
 
 	const newBars = bars
 		.enter()
+		.append('a')
+		.attr('xlink:href', (dataPoint: ChartData) => websiteMeta[dataPoint.website].link)
+		.attr('target', '_blank')
 		.append('g')
 		.attr('class', 'bar')
 		.attr('transform', (dataPoint: ChartData) => `translate(0, ${yScale(dataPoint.website)})`)
@@ -52,7 +55,7 @@ export function update_chart(
 	newBars
 		.append('rect')
 		.attr('height', yScale.bandwidth())
-		.attr('fill', (dataPoint: ChartData) => dataPoint.color)
+		.attr('fill', (dataPoint: ChartData) => websiteMeta[dataPoint.website].color)
 		.attr('stroke', baseChartConfig.borderColor)
 		.attr('stroke-width', baseChartConfig.borderWidth)
 		.attr('rx', baseChartConfig.borderRadius)
@@ -117,7 +120,7 @@ export function update_chart(
 		.attr('x', baseChartConfig.xDistance)
 		.attr('y', dynamicChartConfig.mobile ? yScale.bandwidth() / 2 - 20 : yScale.bandwidth() / 2)
 		.attr('dy', baseChartConfig.yChange)
-		.text((dataPoint: ChartData) => dataPoint.website)
+		.text((dataPoint: ChartData) => websiteMeta[dataPoint.website].label)
 
 	return svg
 }

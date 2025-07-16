@@ -40,6 +40,8 @@ impl Consumer for MeiliConsumer {
     async fn consume_cdc(&mut self, data: CDCRow<'_>) -> anyhow::Result<()> {
         match data.operation {
             OperationType::RowInsert => {
+                self.state.metrics.swap_products.inc();
+
                 add_items(
                     self.state.meili_client.clone(),
                     &self.meili_index,
@@ -54,6 +56,8 @@ impl Consumer for MeiliConsumer {
             | OperationType::RowRangeDelExclLeft
             | OperationType::RowRangeDelInclRight
             | OperationType::RowRangeDelExclRight => {
+                self.state.metrics.swap_products.dec();
+
                 handle_item_deletion(
                     &data,
                     self.state.clone(),

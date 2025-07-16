@@ -200,10 +200,19 @@ pub enum WebsitePath {
 
     #[strum(serialize = "photos")]
     Photos,
+
+    #[strum(serialize = "home")]
+    Home,
 }
 
 pub struct VerifiedTokenResult {
     pub serialized_account: Option<String>,
     pub redis_action: RedisAction,
     pub id: String,
+}
+
+#[derive(Serialize)]
+pub struct VisitorPayload {
+    pub website: String,
+    pub visitors: u64,
 }
