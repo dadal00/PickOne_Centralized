@@ -1,10 +1,10 @@
 services:
-  boiler_rust:
+  main_rust:
     build:
       context: ../backend
-    image: boiler_rust:latest
+    image: main_rust:latest
 
-  boiler_svelte:
+  main_svelte:
     build:
       args:
         - PUBLIC_SWAP_BACKEND_PATH=${PUBLIC_SWAP_BACKEND_PATH}
@@ -19,9 +19,9 @@ services:
         - PUBLIC_MIN_PASSWORD_LENGTH=${PUBLIC_MIN_PASSWORD_LENGTH}
         - PUBLIC_SVELTE_SWAP_ROOT=${PUBLIC_SVELTE_SWAP_ROOT}
       context: ../frontend
-    image: boiler_svelte:latest
+    image: main_svelte:latest
 
-  boiler_caddy:
+  main_caddy:
     build:
       context: ./caddy
-    image: boiler_caddy:latest
+    image: main_caddy:latest

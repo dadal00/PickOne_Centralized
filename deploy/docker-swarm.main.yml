@@ -64,7 +64,7 @@ services:
         loki-retries: "3"
 
   rust:
-    image: boiler_rust:latest
+    image: main_rust:latest
     networks:
       - main_net
     volumes:
@@ -122,7 +122,7 @@ services:
       - RUST_HOME_LIMIT_MS=${RUST_HOME_LIMIT_MS}
 
   svelte:
-    image: boiler_svelte:latest
+    image: main_svelte:latest
     networks:
       - main_net
     secrets:
@@ -140,7 +140,7 @@ services:
       - PORT=${SVELTE_PORT}
 
   caddy:
-    image: boiler_caddy:latest
+    image: main_caddy:latest
     networks:
       - main_net
     secrets:
