@@ -6,6 +6,6 @@
 	<div
 		class="absolute self-center text-sm sm:text-base md:text-lg text-zinc-700 opacity-90 mt-20 font-sans"
 	>
-		Ranked by Most Visitors
+		Ranked by most visitors. Click the bars!
 	</div>
 </div>

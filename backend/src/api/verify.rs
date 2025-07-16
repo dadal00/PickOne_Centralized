@@ -19,12 +19,24 @@ use tracing::warn;
 
 pub static EMAIL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^.+@purdue\.edu$").unwrap());
 pub static VALIDATION: Lazy<Validation> = Lazy::new(|| Validation::new(Algorithm::HS256));
-pub static DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
+pub static SWAP_DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
     DecodingKey::from_secret(
         read_to_string("/run/secrets/SWAP_API_TOKEN")
             .map(|s| s.trim().to_string())
             .map_err(|e| {
                 warn!("Failed to read SWAP_API_TOKEN from file: {}", e);
+                AppError::IO(e)
+            })
+            .unwrap()
+            .as_bytes(),
+    )
+});
+pub static HOME_DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
+    DecodingKey::from_secret(
+        read_to_string("/run/secrets/HOME_API_TOKEN")
+            .map(|s| s.trim().to_string())
+            .map_err(|e| {
+                warn!("Failed to read HOME_API_TOKEN from file: {}", e);
                 AppError::IO(e)
             })
             .unwrap()
@@ -97,14 +109,20 @@ pub async fn verify_token(
     Ok(None)
 }
 
-pub fn verify_api_token(headers: HeaderMap) -> bool {
+pub fn verify_api_token(headers: HeaderMap, website_path: WebsitePath) -> bool {
     let jwt = get_cookie(&headers, "api_token");
 
     if jwt.is_none() {
         return false;
     }
 
-    decode::<DummyClaims>(&jwt.expect("is_none failed"), &DECODING_KEY, &VALIDATION).is_ok()
+    let decoding_key = match website_path {
+        WebsitePath::BoilerSwap => &SWAP_DECODING_KEY,
+        WebsitePath::Photos => panic!("verify_api_token should not be called for Photos"),
+        WebsitePath::Home => &HOME_DECODING_KEY,
+    };
+
+    decode::<DummyClaims>(&jwt.expect("is_none failed"), decoding_key, &VALIDATION).is_ok()
 }
 
 pub fn verify_password(password: &str, password_hash: &str) -> Result<bool, AppError> {

@@ -10,12 +10,7 @@ class ChartState {
 		minBarWidth: baseChartConfig.baseMinBarWidth
 	})
 
-	private data: ChartData[] = [
-		{ website: 'BoilerSwap', visitors: 1250, color: 'red' },
-		{ website: 'BoilerCuts', visitors: 980, color: 'blue' },
-		{ website: 'Voting', visitors: 700, color: 'green' },
-		{ website: 'Home', visitors: 600, color: 'purple' }
-	]
+	private data: ChartData[] = []
 
 	getChartConfig(): chartConfig {
 		return this.chartConfig
@@ -50,7 +45,7 @@ class ChartState {
 	}
 
 	setData(data: ChartData[]): void {
-		this.data = data
+		this.data = [...data].sort((a, b) => b.visitors - a.visitors)
 	}
 }
 

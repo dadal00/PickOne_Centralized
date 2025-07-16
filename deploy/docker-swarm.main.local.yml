@@ -80,6 +80,7 @@ services:
       - RUST_FROM_EMAIL_PASSWORD
       - RUST_FROM_EMAIL_SERVER
       - SWAP_API_TOKEN
+      - HOME_API_TOKEN
       - MEILI_ADMIN_KEY
     logging:
       driver: loki
@@ -118,6 +119,7 @@ services:
       - RUST_BOT_PETE_FILE=${RUST_BOT_PETE_FILE}
       - RUST_BOT_TOWER_FILE=${RUST_BOT_TOWER_FILE}
       - RUST_BOT_FOUNTAIN_FILE=${RUST_BOT_FOUNTAIN_FILE}
+      - RUST_HOME_LIMIT_MS=${RUST_HOME_LIMIT_MS}
 
   svelte:
     image: boiler_svelte:latest
@@ -125,8 +127,9 @@ services:
       - main_net
     secrets:
       - SWAP_API_TOKEN
+      - HOME_API_TOKEN
       - SEARCH_TOKEN
-    command: sh -c "export SWAP_API_TOKEN=$$(cat /run/secrets/SWAP_API_TOKEN) && export SEARCH_TOKEN=$$(cat /run/secrets/SEARCH_TOKEN) && node build"
+    command: sh -c "export HOME_API_TOKEN=$$(cat /run/secrets/HOME_API_TOKEN) && export SWAP_API_TOKEN=$$(cat /run/secrets/SWAP_API_TOKEN) && export SEARCH_TOKEN=$$(cat /run/secrets/SEARCH_TOKEN) && node build"
     deploy:
       mode: global
       restart_policy:
@@ -142,6 +145,7 @@ services:
       - main_net
     secrets:
       - SWAP_API_TOKEN
+      - HOME_API_TOKEN
       - SEARCH_TOKEN
     ports:
       - "80:80"
@@ -158,7 +162,7 @@ services:
         loki-batch-size: "10"
         loki-timeout: "10s"
         loki-retries: "3"
-    command: sh -c "export SWAP_API_TOKEN=$$(cat /run/secrets/SWAP_API_TOKEN) && export SEARCH_TOKEN=$$(cat /run/secrets/SEARCH_TOKEN) && caddy run --config /etc/caddy/Caddyfile"
+    command: sh -c "export HOME_API_TOKEN=$$(cat /run/secrets/HOME_API_TOKEN) && export SWAP_API_TOKEN=$$(cat /run/secrets/SWAP_API_TOKEN) && export SEARCH_TOKEN=$$(cat /run/secrets/SEARCH_TOKEN) && caddy run --config /etc/caddy/Caddyfile"
     environment:
       - CADDY_LOG_ROTATE_DAYS=356
       - CADDY_LOG_ROTATE_SIZE=10000
@@ -168,8 +172,11 @@ services:
       - SVELTE_NAME=${SVELTE_NAME}
       - SVELTE_PORT=${SVELTE_PORT}
       - MEILI_NAME=${MEILI_NAME}
+      - PUBLIC_MEILI_PATH=${PUBLIC_MEILI_PATH}
       - MEILI_PORT=${MEILI_PORT}
       - PUBLIC_SVELTE_SWAP_ROOT=${PUBLIC_SVELTE_SWAP_ROOT}
+      - PUBLIC_SWAP_BACKEND_PATH=${PUBLIC_SWAP_BACKEND_PATH}
+      - PUBLIC_HOME_BACKEND_PATH=${PUBLIC_HOME_BACKEND_PATH}
     volumes:
       - ./caddy/data:/data
       - ./caddy/config:/config
@@ -186,6 +193,8 @@ secrets:
   RUST_FROM_EMAIL_SERVER:
     external: true
   SWAP_API_TOKEN:
+    external: true
+  HOME_API_TOKEN:
     external: true
   MEILI_MASTER_KEY:
     external: true
