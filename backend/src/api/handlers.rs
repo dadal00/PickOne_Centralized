@@ -1,9 +1,12 @@
 use super::{
     lock::{freeze_account, unfreeze_account},
-    models::{Account, Action, ItemPayload, RedisAccount, RedisAction, Token, WebsitePath},
+    models::{
+        Account, Action, ItemPayload, RedisAccount, RedisAction, RedisMetricAction, Token,
+        WebsitePath,
+    },
     redis::{
         clear_all_keys, create_redis_account, get_redis_account, handle_item_insertion,
-        increment_lock_key, is_redis_locked, is_temporarily_locked_ms, remove_id,
+        incr_metric, increment_lock_key, is_redis_locked, is_temporarily_locked_ms, remove_id,
     },
     sessions::{create_session, create_temporary_session, generate_cookie, get_cookie},
     twofactor::{CODE_REGEX, generate_code},
@@ -13,7 +16,7 @@ use super::{
         verify_api_token, verify_token,
     },
 };
-use crate::{AppError, AppState, metrics::get_visitors};
+use crate::{AppError, AppState, metrics::get_visitors_payload};
 use axum::{
     Json,
     extract::{ConnectInfo, Request, State},
@@ -44,7 +47,7 @@ pub async fn visitors_handler(
         return Ok((StatusCode::UNAUTHORIZED, "Too many requests from your ip").into_response());
     }
 
-    Ok((StatusCode::OK, get_visitors(state.clone())).into_response())
+    Ok((StatusCode::OK, get_visitors_payload(state.clone()).await?).into_response())
 }
 
 pub async fn api_token_check(
@@ -58,7 +61,16 @@ pub async fn api_token_check(
         .path()
         .starts_with(&format!("/{}/", WebsitePath::Photos.as_ref()))
     {
-        state.metrics.bot_visitors.inc();
+        incr_metric(
+            state.clone(),
+            &format!(
+                "{}:{}:{}",
+                WebsitePath::Photos.as_ref(),
+                RedisAction::Metric.as_ref(),
+                RedisMetricAction::Visitors.as_ref()
+            ),
+        )
+        .await?;
 
         return Ok(next.run(request).await);
     }
@@ -75,12 +87,30 @@ pub async fn api_token_check(
 
     let website_path = match request.uri().path() {
         path if path.starts_with(&format!("/{}/api", WebsitePath::BoilerSwap.as_ref())) => {
-            state.metrics.swap_visitors.inc();
+            incr_metric(
+                state.clone(),
+                &format!(
+                    "{}:{}:{}",
+                    WebsitePath::BoilerSwap.as_ref(),
+                    RedisAction::Metric.as_ref(),
+                    RedisMetricAction::Visitors.as_ref()
+                ),
+            )
+            .await?;
 
             WebsitePath::BoilerSwap
         }
         path if path.starts_with(&format!("/{}/api", WebsitePath::Home.as_ref())) => {
-            state.metrics.home_visitors.inc();
+            incr_metric(
+                state.clone(),
+                &format!(
+                    "{}:{}:{}",
+                    WebsitePath::Home.as_ref(),
+                    RedisAction::Metric.as_ref(),
+                    RedisMetricAction::Visitors.as_ref()
+                ),
+            )
+            .await?;
 
             WebsitePath::Home
         }

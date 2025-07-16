@@ -42,6 +42,17 @@ static DECR_ITEMS_SCRIPT: Lazy<Script> = Lazy::new(|| {
     )
 });
 
+static DECR_METRIC_SCRIPT: Lazy<Script> = Lazy::new(|| {
+    Script::new(
+        r#"
+        local attempts = redis.call("DECR", KEYS[1])
+        if attempts < 0 then
+            redis.call("SET", KEYS[1], 0)
+        end
+    "#,
+    )
+});
+
 static INSERT_SESSION_SCRIPT: Lazy<Script> = Lazy::new(|| {
     Script::new(
         r#"
@@ -438,4 +449,29 @@ pub async fn is_temporarily_locked_ms(
         .await?;
 
     Ok(result.is_none())
+}
+
+pub async fn incr_metric(state: Arc<AppState>, key: &str) -> Result<(), AppError> {
+    state.redis_connection_manager.clone().incr(key, 1).await?;
+
+    Ok(())
+}
+
+pub async fn decr_metric(state: Arc<AppState>, key: &str) -> Result<(), AppError> {
+    let _: () = DECR_METRIC_SCRIPT
+        .key(key)
+        .invoke_async(&mut state.redis_connection_manager.clone())
+        .await?;
+
+    Ok(())
+}
+
+pub async fn set_metric(
+    mut redis_connection_manager: ConnectionManager,
+    key: &str,
+    val: &usize,
+) -> Result<(), AppError> {
+    redis_connection_manager.set(key, val).await?;
+
+    Ok(())
 }

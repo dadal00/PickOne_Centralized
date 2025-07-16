@@ -14,7 +14,10 @@ use std::{
     env,
     marker::{Send, Sync},
     ops::ControlFlow,
-    sync::Arc,
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering::Relaxed},
+    },
 };
 use tokio::task::JoinHandle;
 use tracing::warn;
@@ -23,7 +26,14 @@ use uuid::Uuid;
 pub async fn init_meilisearch(
     database_session: Arc<Session>,
     database_queries: &DatabaseQueries,
-) -> Result<(Arc<Client>, JoinHandle<Result<(), AppError>>), AppError> {
+) -> Result<
+    (
+        Arc<Client>,
+        JoinHandle<Result<(), AppError>>,
+        Arc<AtomicUsize>,
+    ),
+    AppError,
+> {
     let meili_url = env::var("MEILI_URL").unwrap_or_else(|_| {
         warn!("Environment variable MEILI_URL not found, using default");
         "http://meilisearch:7700".to_string()
@@ -63,6 +73,9 @@ pub async fn init_meilisearch(
         .await
         .unwrap();
 
+    let item_counter = Arc::new(AtomicUsize::new(0));
+    let item_counter_clone = Arc::clone(&item_counter);
+
     let reindex_future = tokio::spawn(async move {
         reindex(
             session_clone,
@@ -70,11 +83,12 @@ pub async fn init_meilisearch(
             client_clone,
             tables::ITEMS,
             items::ITEM_ID,
+            item_counter_clone,
         )
         .await
     });
 
-    Ok((meili_client, reindex_future))
+    Ok((meili_client, reindex_future, item_counter))
 }
 
 pub async fn reindex(
@@ -83,6 +97,7 @@ pub async fn reindex(
     meili_client: Arc<Client>,
     index_name: &str,
     item_id_name: &str,
+    item_counter: Arc<AtomicUsize>,
 ) -> Result<(), AppError> {
     let mut paging_state = PagingState::start();
 
@@ -98,6 +113,8 @@ pub async fn reindex(
         let row_vec: Vec<ItemRow> = row_result
             .rows::<ItemRow>()?
             .collect::<Result<Vec<_>, _>>()?;
+
+        item_counter.fetch_add(row_vec.len(), Relaxed);
 
         add_items(
             meili_client.clone(),

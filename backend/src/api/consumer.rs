@@ -1,8 +1,8 @@
 use super::{
     database::{convert_cdc_item, get_cdc_id},
     meilisearch::{add_items, delete_item},
-    models::RedisAction,
-    redis::{decrement_items, remove_id, try_get},
+    models::{RedisAction, RedisMetricAction},
+    redis::{decr_metric, decrement_items, incr_metric, remove_id, try_get},
 };
 use crate::state::AppState;
 use async_trait::async_trait;
@@ -40,7 +40,16 @@ impl Consumer for MeiliConsumer {
     async fn consume_cdc(&mut self, data: CDCRow<'_>) -> anyhow::Result<()> {
         match data.operation {
             OperationType::RowInsert => {
-                self.state.metrics.swap_products.inc();
+                incr_metric(
+                    self.state.clone(),
+                    &format!(
+                        "{}:{}:{}",
+                        &self.website_path,
+                        RedisAction::Metric.as_ref(),
+                        RedisMetricAction::Items.as_ref()
+                    ),
+                )
+                .await?;
 
                 add_items(
                     self.state.meili_client.clone(),
@@ -56,7 +65,16 @@ impl Consumer for MeiliConsumer {
             | OperationType::RowRangeDelExclLeft
             | OperationType::RowRangeDelInclRight
             | OperationType::RowRangeDelExclRight => {
-                self.state.metrics.swap_products.dec();
+                decr_metric(
+                    self.state.clone(),
+                    &format!(
+                        "{}:{}:{}",
+                        &self.website_path,
+                        RedisAction::Metric.as_ref(),
+                        RedisMetricAction::Visitors.as_ref()
+                    ),
+                )
+                .await?;
 
                 handle_item_deletion(
                     &data,

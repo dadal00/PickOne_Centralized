@@ -75,6 +75,9 @@ pub enum RedisAction {
 
     #[strum(serialize = "item_deleted")]
     DeletedItem,
+
+    #[strum(serialize = "metric")]
+    Metric,
 }
 
 #[derive(Deserialize)]
@@ -215,4 +218,13 @@ pub struct VerifiedTokenResult {
 pub struct VisitorPayload {
     pub website: String,
     pub visitors: u64,
+}
+
+#[derive(EnumString, AsRefStr, PartialEq)]
+pub enum RedisMetricAction {
+    #[strum(serialize = "visitors")]
+    Visitors,
+
+    #[strum(serialize = "items")]
+    Items,
 }
