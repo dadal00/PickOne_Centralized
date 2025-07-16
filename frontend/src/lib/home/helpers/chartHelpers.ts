@@ -194,7 +194,12 @@ export function calculateDimensions(
 
 	chartState.setWidth(containerRect.width)
 
-	chartState.setHeight(containerRect.height * (chartState.getChartConfig().mobile ? baseChartConfig.mobileHeightScale : baseChartConfig.heightScale))
+	chartState.setHeight(
+		containerRect.height *
+			(chartState.getChartConfig().mobile
+				? baseChartConfig.mobileHeightScale
+				: baseChartConfig.heightScale)
+	)
 
 	if (!svg) return svg
 
