@@ -1,6 +1,10 @@
 @import 'tailwindcss';
 @source inline("border-l-{green,red,yellow}-500 text-{green,red,yellow}-600");
 
+mark {
+	background-color: #fde68a;
+	color: #000;
+}
 .fade-in {
 	animation: fadeIn 0.5s ease-in;
 }
