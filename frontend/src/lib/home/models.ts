@@ -7,29 +7,36 @@ export type ChartData = {
 
 type WebsiteMeta = {
 	label: string
-	color: string
+	color?: string
+	gradient?: {
+		gradientStart: string
+		gradientEnd: string
+	}
 	link: string
 }
 
 export const websiteMeta: Record<Website, WebsiteMeta> = {
 	home: {
 		label: 'Home',
-		color: 'red',
+		color: '#d95b5b',
 		link: '/'
 	},
 	photos: {
 		label: 'Cut',
-		color: 'blue',
+		color: '#5b98d9',
 		link: 'https://t.me/boilercuts_bot'
 	},
 	swap: {
 		label: 'Swap',
-		color: 'green',
+		gradient: {
+			gradientStart: '#facc15',
+			gradientEnd: '#f59e0b'
+		},
 		link: PUBLIC_SVELTE_SWAP_ROOT
 	},
 	voting: {
 		label: 'Vote',
-		color: 'orange',
+		color: '#d064dd',
 		link: '/'
 	}
 }

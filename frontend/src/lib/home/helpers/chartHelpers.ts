@@ -7,12 +7,32 @@ export function chart_init(
 	width: number,
 	height: number
 ): d3.Selection<SVGSVGElement, unknown, HTMLElement, any> {
-	return d3
+	const svg = d3
 		.select('#chart')
 		.append('svg')
 		.attr('viewBox', [0, 0, width, height])
 		.attr('width', '100%')
 		.attr('height', '100%')
+
+	svg
+		.append('defs')
+		.append('linearGradient')
+		.attr('id', 'swap-gradient')
+		.attr('x1', '0%')
+		.attr('y1', '0%')
+		.attr('x2', '100%')
+		.attr('y2', '100%')
+		.selectAll('stop')
+		.data([
+			{ offset: '0%', color: websiteMeta.swap.gradient!.gradientStart },
+			{ offset: '100%', color: websiteMeta.swap.gradient!.gradientEnd }
+		])
+		.enter()
+		.append('stop')
+		.attr('offset', (d) => d.offset)
+		.attr('stop-color', (d) => d.color)
+
+	return svg
 }
 
 export function update_chart(
@@ -55,7 +75,11 @@ export function update_chart(
 	newBars
 		.append('rect')
 		.attr('height', yScale.bandwidth())
-		.attr('fill', (dataPoint: ChartData) => websiteMeta[dataPoint.website].color)
+		.attr('fill', (dataPoint: ChartData) => {
+			return dataPoint.website === 'swap'
+				? 'url(#swap-gradient)'
+				: websiteMeta[dataPoint.website].color!
+		})
 		.attr('stroke', baseChartConfig.borderColor)
 		.attr('stroke-width', baseChartConfig.borderWidth)
 		.attr('rx', baseChartConfig.borderRadius)
