@@ -3,10 +3,6 @@
 	import Header from '$lib/home/components/Header.svelte'
 </script>
 
-<svelte:head>
-	<title>PickOne</title>
-</svelte:head>
-
 <main class="flex flex-col w-screen h-screen bg-[#fff6ed] fixed py-8">
 	<Header />
 	<BarChart />

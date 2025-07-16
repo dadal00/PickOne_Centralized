@@ -18,7 +18,7 @@ type WebsiteMeta = {
 export const websiteMeta: Record<Website, WebsiteMeta> = {
 	home: {
 		label: 'Home',
-		color: '#d95b5b',
+		color: '#2C67F2',
 		link: '/'
 	},
 	photos: {

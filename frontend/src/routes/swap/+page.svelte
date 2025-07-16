@@ -20,6 +20,14 @@
 	}
 </script>
 
+<svelte:head>
+	<title>BoilerSwap</title>
+	<meta
+		name="description"
+		content="The sustainable way for Purdue students to share, reuse, and reduce waste. Give away what you don't need, find what you do."
+	/>
+</svelte:head>
+
 <section class="py-16 px-6 text-center bg-white">
 	<div class="container mx-auto max-w-4xl">
 		<h1 class="text-5xl font-bold text-gray-900 mb-4 fade-in">Give Away, Grab, Save Money!</h1>
