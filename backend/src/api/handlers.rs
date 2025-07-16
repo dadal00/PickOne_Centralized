@@ -56,6 +56,10 @@ pub async fn api_token_check(
     request: Request,
     next: Next,
 ) -> Result<impl IntoResponse, AppError> {
+    if request.uri().path() == "/metrics" {
+        return Ok(next.run(request).await);
+    }
+
     if request
         .uri()
         .path()

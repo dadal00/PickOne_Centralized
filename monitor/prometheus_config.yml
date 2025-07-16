@@ -4,7 +4,7 @@ global:
   scrape_timeout: 5m
 
 scrape_configs:
-  - job_name: "boiler-metrics"
+  - job_name: "main_app-metrics"
     scheme: http
     metrics_path: "/metrics"
     static_configs:
@@ -17,6 +17,14 @@ scrape_configs:
     metrics_path: "/metrics"
     static_configs:
       - targets: ["scylladb:9180"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+  - job_name: "search-metrics"
+    scheme: http
+    metrics_path: "/stats"
+    static_configs:
+      - targets: ["meilisearch:7700"]
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance

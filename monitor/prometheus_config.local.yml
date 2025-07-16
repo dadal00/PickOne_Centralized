@@ -22,7 +22,7 @@ scrape_configs:
         target_label: instance
   - job_name: "search-metrics"
     scheme: http
-    metrics_path: "/metrics"
+    metrics_path: "/stats"
     static_configs:
       - targets: ["meilisearch:7700"]
     relabel_configs:

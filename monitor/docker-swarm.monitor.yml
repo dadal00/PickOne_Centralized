@@ -22,7 +22,7 @@ services:
       - monitor_net
       - main_net
     volumes:
-      - ./prometheus_config.local.yml:/etc/prometheus/prometheus_config.yml
+      - ./prometheus_config.yml:/etc/prometheus/prometheus_config.yml
       - ./prometheus_data:/prometheus_data
     command:
       - "--config.file=/etc/prometheus/prometheus_config.yml"
