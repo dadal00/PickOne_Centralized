@@ -28,3 +28,6 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
+    authorization:
+      type: Bearer
+      credentials_file: /run/secrets/MEILI_ADMIN_KEY
