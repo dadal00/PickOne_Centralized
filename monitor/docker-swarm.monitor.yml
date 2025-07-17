@@ -21,6 +21,8 @@ services:
     networks:
       - monitor_net
       - main_net
+    secrets:
+      - MEILI_ADMIN_KEY
     volumes:
       - ./prometheus_config.yml:/etc/prometheus/prometheus_config.yml
       - ./prometheus_data:/prometheus_data
@@ -63,6 +65,10 @@ services:
         "--no-global-config",
         "--log-format=CADDY",
       ]
+
+secrets:
+  MEILI_ADMIN_KEY:
+    external: true
 
 networks:
   main_net:
