@@ -183,14 +183,6 @@ services:
       - ./caddy/logs:/var/log/caddy
       - ./caddy/config/Caddyfile.local:/etc/caddy/Caddyfile
 
-  # cloudflared:
-  #   image: cloudflare/cloudflared:2025.5.0@sha256:f9d5c5b94cd7337c0c939a6dbf5537db34030828c243fca6b589fd85ab25d43b
-  #   networks:
-  #     - main_net
-  #   command: tunnel run --token-file /run/secrets/CLOUDFLARE_TUNNEL_TOKEN
-  #   secrets:
-  #     - CLOUDFLARE_TUNNEL_TOKEN
-
 secrets:
   RUST_BOT_CUTS_KEY:
     external: true
@@ -210,8 +202,6 @@ secrets:
     external: true
   MEILI_ADMIN_KEY:
     external: true
-  # CLOUDFLARE_TUNNEL_TOKEN:
-  #   external: true
 
 networks:
   main_net:
