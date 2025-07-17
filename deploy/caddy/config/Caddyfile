@@ -74,7 +74,5 @@
 		level DEBUG
 	}
 
-	tls /data/caddy/certificates/local/{$CADDY_DOMAIN}/{$CADDY_DOMAIN}.crt /data/caddy/certificates/local/{$CADDY_DOMAIN}/{$CADDY_DOMAIN}.key {
-		protocols tls1.3
-	}
+	tls internal
 }
