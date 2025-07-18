@@ -181,7 +181,7 @@ services:
       - ./caddy/data:/data
       - ./caddy/config:/config
       - ./caddy/logs:/var/log/caddy
-      - ./caddy/config/Caddyfile.local:/etc/caddy/Caddyfile
+      - ./caddy/config/Caddyfile:/etc/caddy/Caddyfile
 
 secrets:
   RUST_BOT_CUTS_KEY:

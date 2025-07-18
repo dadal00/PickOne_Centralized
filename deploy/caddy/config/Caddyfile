@@ -35,7 +35,7 @@
 		}
 	}
 }
-:443 {
+{$CADDY_DOMAIN} {
 	handle /photos/* {
 		reverse_proxy {$RUST_NAME}:{$RUST_PORT}
 	}
