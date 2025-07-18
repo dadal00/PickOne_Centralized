@@ -64,7 +64,6 @@ export const baseChartConfig = {
 	xScale: 1.1,
 	innerPadding: 0.35,
 	heightScale: 0.95,
-	mobileHeightScale: 0.753225,
 
 	// Text config
 	mobileFontSize: 'max(2.6vh, 0.7vw, 0.5rem)',

@@ -21,6 +21,6 @@
 	})
 </script>
 
-<main class="w-screen" style="height: calc(var(--vh, 1vh) * 100)">
+<main class="w-screen h-screen">
 	{@render children()}
 </main>

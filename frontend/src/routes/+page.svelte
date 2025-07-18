@@ -3,7 +3,10 @@
 	import Header from '$lib/home/components/Header.svelte'
 </script>
 
-<main class="flex flex-col w-screen h-screen bg-[#fff6ed] fixed py-8">
+<main
+	class="flex flex-col w-screen bg-[#fff6ed] fixed py-8"
+	style="height: calc(var(--vh, 1vh) * 100)"
+>
 	<Header />
 	<BarChart />
 </main>
