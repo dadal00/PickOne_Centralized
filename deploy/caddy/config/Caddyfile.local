@@ -1,9 +1,9 @@
 {
-	debug
 	order authenticate before respond
 	order authorize before reverse_proxy
 	log stdout {
 		output stdout
+		level INFO
 	}
 	security {
 		authorization policy verifySwapAPI {
