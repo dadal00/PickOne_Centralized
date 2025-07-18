@@ -1,5 +1,5 @@
-use super::{
-    database::get_user,
+use super::microservices::{
+    database::core::get_user,
     redis::{increment_lock_key, is_redis_locked},
 };
 use crate::{AppError, AppState};
@@ -27,19 +27,20 @@ async fn send_code_email(
     code: &str,
 ) -> Result<(), AppError> {
     let email = Message::builder()
-        .from(format!("BoilerSwap <{}>", state.config.from_email).parse()?)
+        .from(format!("BoilerSwap <{}>", state.config.email.from_email).parse()?)
         .to(user_email.parse()?)
         .subject("BoilerSwap Code")
         .body(format!("Your code is {}", code))?;
 
     let credentials = Credentials::new(
-        state.config.from_email.to_string(),
-        state.config.from_email_password.to_string(),
+        state.config.email.from_email.to_string(),
+        state.config.email.from_email_password.to_string(),
     );
 
-    let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&state.config.from_email_server)?
-        .credentials(credentials)
-        .build();
+    let mailer =
+        AsyncSmtpTransport::<Tokio1Executor>::relay(&state.config.email.from_email_server)?
+            .credentials(credentials)
+            .build();
 
     mailer.send(email).await?;
 
@@ -66,7 +67,7 @@ pub fn spawn_code_task(
                 &website_path,
                 &forgot_key.clone().expect("is_some failed"),
                 &email,
-                &state.config.verify_max_attempts,
+                &state.config.authentication.verify_max_attempts,
             )
             .await
             {
@@ -93,8 +94,8 @@ pub fn spawn_code_task(
                 &website_path,
                 &forgot_key.expect("is_some failed"),
                 &email,
-                &state.config.verify_lock_duration_seconds,
-                &state.config.verify_max_attempts,
+                &state.config.authentication.verify_lock_duration_seconds,
+                &state.config.authentication.verify_max_attempts,
             )
             .await)
                 .is_err()

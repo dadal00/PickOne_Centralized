@@ -3,7 +3,10 @@ use super::{
     sessions::get_cookie,
     utilities::format_verified_result,
 };
-use crate::{AppError, AppState};
+use crate::{
+    AppError, AppState,
+    config::{read_secret, try_load},
+};
 use argon2::{
     Algorithm::Argon2id, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier,
     Version::V0x13, password_hash::SaltString,
@@ -14,53 +17,23 @@ use once_cell::sync::Lazy;
 use rand::rngs::OsRng;
 use regex::Regex;
 use rustrict::CensorStr;
-use std::{env, fs::read_to_string, sync::Arc};
+use std::sync::Arc;
 use tracing::warn;
 
 pub static EMAIL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^.+@purdue\.edu$").unwrap());
+
 pub static VALIDATION: Lazy<Validation> = Lazy::new(|| Validation::new(Algorithm::HS256));
-pub static SWAP_DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
-    DecodingKey::from_secret(
-        read_to_string("/run/secrets/SWAP_API_TOKEN")
-            .map(|s| s.trim().to_string())
-            .map_err(|e| {
-                warn!("Failed to read SWAP_API_TOKEN from file: {}", e);
-                AppError::IO(e)
-            })
-            .unwrap()
-            .as_bytes(),
-    )
-});
-pub static HOME_DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| {
-    DecodingKey::from_secret(
-        read_to_string("/run/secrets/HOME_API_TOKEN")
-            .map(|s| s.trim().to_string())
-            .map_err(|e| {
-                warn!("Failed to read HOME_API_TOKEN from file: {}", e);
-                AppError::IO(e)
-            })
-            .unwrap()
-            .as_bytes(),
-    )
-});
-pub static MAX_CHARS: Lazy<usize> = Lazy::new(|| {
-    env::var("PUBLIC_MAX_CHARS")
-        .ok()
-        .and_then(|val| val.parse::<usize>().ok())
-        .unwrap_or(100)
-});
-pub static CODE_LENGTH: Lazy<usize> = Lazy::new(|| {
-    env::var("PUBLIC_CODE_LENGTH")
-        .ok()
-        .and_then(|val| val.parse::<usize>().ok())
-        .unwrap_or(6)
-});
-pub static MIN_PASSWORD_LENGTH: Lazy<usize> = Lazy::new(|| {
-    env::var("PUBLIC_MIN_PASSWORD_LENGTH")
-        .ok()
-        .and_then(|val| val.parse::<usize>().ok())
-        .unwrap_or(10)
-});
+
+pub static SWAP_DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| read_decoding_key("SWAP_API_TOKEN"));
+
+pub static HOME_DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| read_decoding_key("HOME_API_TOKEN"));
+
+pub static MAX_CHARS: Lazy<usize> = Lazy::new(|| try_load("PUBLIC_MAX_CHARS", "100").unwrap());
+
+pub static CODE_LENGTH: Lazy<usize> = Lazy::new(|| try_load("PUBLIC_CODE_LENGTH", "6").unwrap());
+
+pub static MIN_PASSWORD_LENGTH: Lazy<usize> =
+    Lazy::new(|| try_load("PUBLIC_MIN_PASSWORD_LENGTH", "10").unwrap());
 
 pub async fn verify_token(
     state: Arc<AppState>,
@@ -211,4 +184,14 @@ pub fn hash_password(password: &str) -> Result<String, AppError> {
         .to_string();
 
     Ok(password_hash)
+}
+
+fn read_decoding_key(secret_name: &str) -> DecodingKey {
+    DecodingKey::from_secret(
+        read_secret(secret_name)
+            .unwrap_or_else(|e| {
+                panic!("Failed to load {}: {}", secret_name, e);
+            })
+            .as_bytes(),
+    )
 }

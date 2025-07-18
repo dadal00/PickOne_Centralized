@@ -1,20 +1,22 @@
-use super::{
-    database::{get_user, insert_item},
-    lock::check_locks,
-    models::{Action, ItemPayload, RedisAccount, RedisAction, VerifiedTokenResult},
-    twofactor::generate_code,
-    verify::{hash_password, verify_password},
+use super::database::core::{get_user, insert_item};
+use crate::{
+    AppError, AppState,
+    api::{
+        lock::check_locks,
+        models::{Action, ItemPayload, RedisAccount, RedisAction, VerifiedTokenResult},
+        twofactor::generate_code,
+        verify::{hash_password, verify_password},
+    },
+    config::try_load,
 };
-use crate::{AppError, AppState};
 use chrono::Utc;
 use once_cell::sync::Lazy;
 use redis::{
     AsyncTypedCommands, Client, Script,
     aio::{ConnectionManager, ConnectionManagerConfig},
 };
-use std::{env, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
 use tokio::task::spawn_blocking;
-use tracing::warn;
 
 static FAILED_ATTEMPTS_SCRIPT: Lazy<Script> = Lazy::new(|| {
     Script::new(
@@ -69,10 +71,7 @@ static INSERT_SESSION_SCRIPT: Lazy<Script> = Lazy::new(|| {
 });
 
 pub async fn init_redis() -> Result<ConnectionManager, AppError> {
-    let redis_url = env::var("RUST_REDIS_URL").unwrap_or_else(|_| {
-        warn!("Environment variable RUST_REDIS_URL not found, using default");
-        "redis://redis:6379".to_string()
-    });
+    let redis_url = try_load::<String>("RUST_REDIS_URL", "redis://redis:6379").unwrap();
 
     let client = Client::open(redis_url)?;
 
@@ -129,8 +128,8 @@ pub async fn insert_session(
         .key(format!("{}:{}:{}", website_path, key_secondary, email))
         .arg(session_id)
         .arg(email)
-        .arg(state.config.session_duration_seconds)
-        .arg(state.config.max_sessions)
+        .arg(state.config.session.session_duration_seconds)
+        .arg(state.config.session.max_sessions)
         .arg(format!("{}:{}:", website_path, key))
         .invoke_async(&mut state.redis_connection_manager.clone())
         .await?;
@@ -211,7 +210,7 @@ pub async fn get_redis_account(
                 website_path,
                 failed_verify_key,
                 &deserialized.email,
-                &state.config.verify_max_attempts,
+                &state.config.authentication.verify_max_attempts,
             )
             .await?
             {
@@ -240,8 +239,8 @@ pub async fn get_redis_account(
                     website_path,
                     failed_verify_key,
                     &deserialized.email,
-                    &state.config.verify_lock_duration_seconds,
-                    &state.config.verify_max_attempts,
+                    &state.config.authentication.verify_lock_duration_seconds,
+                    &state.config.authentication.verify_max_attempts,
                 )
                 .await?;
                 return Ok(None);
@@ -311,8 +310,8 @@ pub async fn create_redis_account(
                     website_path,
                     failed_auth_key,
                     email,
-                    &state.config.auth_lock_duration_seconds,
-                    &state.config.auth_max_attempts,
+                    &state.config.authentication.auth_lock_duration_seconds,
+                    &state.config.authentication.auth_max_attempts,
                 )
                 .await?;
                 return Ok(None);
@@ -386,7 +385,7 @@ pub async fn handle_item_insertion(
         RedisAction::LockedItems.as_ref(),
         email,
         &0,
-        &state.config.max_items,
+        &state.config.website_specific.max_items,
     )
     .await?;
 

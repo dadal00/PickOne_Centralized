@@ -1,7 +1,9 @@
 use super::{
-    database::insert_user,
+    microservices::{
+        database::core::insert_user,
+        redis::{increment_lock_key, insert_id, insert_session},
+    },
     models::{Action, RedisAccount, RedisAction, WebsitePath},
-    redis::{increment_lock_key, insert_id, insert_session},
     twofactor::spawn_code_task,
 };
 use crate::{AppError, AppState};
@@ -110,8 +112,8 @@ pub async fn create_temporary_session(
             website_path.as_ref(),
             code_key.as_ref().unwrap(),
             &redis_account.email.clone(),
-            &state.config.max_codes_duration_seconds,
-            &state.config.max_codes,
+            &state.config.authentication.max_codes_duration_seconds,
+            &state.config.authentication.max_codes,
         )
         .await?;
     }
@@ -132,14 +134,22 @@ pub async fn create_temporary_session(
             &id
         ),
         serialized,
-        state.config.temporary_session_duration_seconds.into(),
+        state
+            .config
+            .session
+            .temporary_session_duration_seconds
+            .into(),
     )
     .await?;
 
     generate_cookie(
         redis_action.as_ref(),
         &id,
-        state.config.temporary_session_duration_seconds.into(),
+        state
+            .config
+            .session
+            .temporary_session_duration_seconds
+            .into(),
         website_path,
     )
 }
@@ -170,7 +180,7 @@ pub async fn create_session(
     generate_cookie(
         redis_action.as_ref(),
         &session_id,
-        state.config.session_duration_seconds.into(),
+        state.config.session.session_duration_seconds.into(),
         website_path,
     )
 }

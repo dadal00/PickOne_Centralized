@@ -3,7 +3,7 @@ use super::{
     photo::{download_photo, generate_qr_bytes, process_photos},
     redis::get_num_photos,
 };
-use crate::{api::redis::remove_id, config::read_secret, error::AppError, state::AppState};
+use crate::{AppError, AppState, api::microservices::redis::remove_id, config::read_secret};
 use dptree::case;
 use std::{error::Error as stdErr, sync::Arc};
 use teloxide::{
@@ -13,16 +13,11 @@ use teloxide::{
     types::{FileMeta, InputFile},
     utils::command::BotCommands,
 };
-use tracing::info;
 
 pub async fn start_bot(state: Arc<AppState>) -> Result<(), AppError> {
-    let bot = Bot::new(
-        read_secret("RUST_BOT_CUTS_KEY")
-            .inspect_err(|_| {
-                info!("RUST_BOT_CUTS_KEY not set, using default");
-            })
-            .unwrap_or_else(|_| "its so over".into()),
-    );
+    let bot = Bot::new(read_secret("RUST_BOT_CUTS_KEY").unwrap_or_else(|e| {
+        panic!("Failed to load RUST_BOT_CUTS_KEY: {}", e);
+    }));
 
     tokio::spawn(async move {
         Dispatcher::builder(bot, schema())
@@ -71,7 +66,7 @@ async fn process(bot: Bot, msg: Message, state: Arc<AppState>) -> HandlerResult 
     )
     .await?;
 
-    if num_photos < state.config.bot_num_pictures {
+    if num_photos < state.config.bot.num_pictures {
         bot.send_message(
             msg.chat.id,
             format!("{}{}", num_photos, ChatMessage::Received.as_ref()),
@@ -86,7 +81,7 @@ async fn process(bot: Bot, msg: Message, state: Arc<AppState>) -> HandlerResult 
 
     let link = format!(
         "{}/{}",
-        state.config.bot_photo_url,
+        state.config.bot.photo_url,
         process_photos(
             state.clone(),
             RedisBotAction::User,
@@ -115,7 +110,7 @@ async fn listen(bot: Bot, msg: Message, state: Arc<AppState>) -> HandlerResult {
 
     let file: &FileMeta = &photos.expect("is_none failed").last().unwrap().file;
 
-    if file.size > state.config.bot_max_bytes {
+    if file.size > state.config.bot.max_bytes {
         bot.send_message(msg.chat.id, ChatMessage::ImageTooLarge.as_ref())
             .await?;
 

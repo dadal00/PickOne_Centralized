@@ -1,210 +1,141 @@
-use crate::error::AppError;
-use std::{env, fs::read_to_string};
+use crate::AppError;
+use std::{env, fmt::Display, fs::read_to_string, str::FromStr};
 use tracing::{info, warn};
 
-#[derive(Debug, Clone)]
-pub struct Config {
+#[derive(Clone)]
+pub struct Server {
     pub rust_port: u16,
     pub svelte_url: String,
+}
+
+#[derive(Clone)]
+pub struct Email {
     pub from_email: String,
     pub from_email_server: String,
     pub from_email_password: String,
-    pub max_sessions: u8,
+}
+
+#[derive(Clone)]
+pub struct Authentication {
     pub auth_max_attempts: u8,
     pub auth_lock_duration_seconds: u16,
     pub verify_max_attempts: u8,
     pub verify_lock_duration_seconds: u16,
-    pub temporary_session_duration_seconds: u16,
-    pub session_duration_seconds: u16,
     pub max_codes: u8,
     pub max_codes_duration_seconds: u16,
+}
+
+#[derive(Clone)]
+pub struct Session {
+    pub temporary_session_duration_seconds: u16,
+    pub max_sessions: u8,
+    pub session_duration_seconds: u16,
+}
+
+#[derive(Clone)]
+pub struct WebsiteSpecific {
     pub max_items: u8,
-
-    pub bot_num_pictures: u8,
-    pub bot_pictures_ttl: u32,
-    pub bot_max_bytes: u32,
-    pub bot_photo_url: String,
-
     pub home_limit_ms: u8,
+}
+
+#[derive(Clone)]
+pub struct Bot {
+    pub num_pictures: u8,
+    pub pictures_ttl: u32,
+    pub max_bytes: u32,
+    pub photo_url: String,
+}
+
+#[derive(Clone)]
+pub struct Config {
+    pub server: Server,
+    pub email: Email,
+    pub authentication: Authentication,
+    pub session: Session,
+    pub website_specific: WebsiteSpecific,
+    pub bot: Bot,
+}
+
+impl Server {
+    pub fn load() -> Result<Self, AppError> {
+        Ok(Self {
+            rust_port: try_load("RUST_PORT", "8080")?,
+            svelte_url: try_load("SVELTE_URL", "http://localhost:5173")?,
+        })
+    }
+}
+
+impl Email {
+    pub fn load() -> Result<Self, AppError> {
+        Ok(Self {
+            from_email: read_secret("RUST_FROM_EMAIL").unwrap_or_else(|e| {
+                panic!("Failed to load RUST_FROM_EMAIL: {}", e);
+            }),
+            from_email_server: read_secret("RUST_FROM_EMAIL_SERVER").unwrap_or_else(|e| {
+                panic!("Failed to load RUST_FROM_EMAIL_SERVER: {}", e);
+            }),
+            from_email_password: read_secret("RUST_FROM_EMAIL_PASSWORD").unwrap_or_else(|e| {
+                panic!("Failed to load RUST_FROM_EMAIL_PASSWORD: {}", e);
+            }),
+        })
+    }
+}
+
+impl Authentication {
+    pub fn load() -> Result<Self, AppError> {
+        Ok(Self {
+            auth_max_attempts: try_load("RUST_AUTH_MAX_ATTEMPTS", "15")?,
+            auth_lock_duration_seconds: try_load("RUST_AUTH_LOCK_DURATION_SECS", "1800")?,
+            verify_max_attempts: try_load("RUST_VERIFY_MAX_ATTEMPTS", "3")?,
+            verify_lock_duration_seconds: try_load("RUST_VERIFY_LOCK_DURATION_SECS", "600")?,
+            max_codes: try_load("RUST_MAX_CODES", "5")?,
+            max_codes_duration_seconds: try_load("RUST_MAX_CODES_DURATION_SECS", "1800")?,
+        })
+    }
+}
+
+impl Session {
+    pub fn load() -> Result<Self, AppError> {
+        Ok(Self {
+            temporary_session_duration_seconds: try_load(
+                "PUBLIC_TEMP_SESSION_DURATION_SECS",
+                "600",
+            )?,
+            max_sessions: try_load("RUST_MAX_SESSIONS", "2")?,
+            session_duration_seconds: try_load("RUST_SESSION_DURATION_SECS", "3600")?,
+        })
+    }
+}
+
+impl WebsiteSpecific {
+    pub fn load() -> Result<Self, AppError> {
+        Ok(Self {
+            home_limit_ms: try_load("RUST_HOME_LIMIT_MS", "50")?,
+            max_items: try_load("RUST_MAX_ITEMS", "15")?,
+        })
+    }
+}
+
+impl Bot {
+    pub fn load() -> Result<Self, AppError> {
+        Ok(Self {
+            photo_url: try_load("RUST_BOT_PHOTO_URL", "https://boiler/photos")?,
+            max_bytes: try_load("RUST_BOT_MAX_BYTES", "5_242_880")?,
+            pictures_ttl: try_load("RUST_BOT_PICTURES_TTL", "86400")?,
+            num_pictures: try_load("RUST_BOT_NUM_PICTURES", "4")?,
+        })
+    }
 }
 
 impl Config {
     pub fn load() -> Result<Self, AppError> {
-        let home_limit_ms = var("RUST_HOME_LIMIT_MS")
-            .inspect_err(|_| {
-                info!("RUST_HOME_LIMIT_MS not set, using default");
-            })
-            .unwrap_or_else(|_| "50".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_HOME_LIMIT_MS value".into()))?;
-
-        let rust_port = var("RUST_PORT")
-            .inspect_err(|_| {
-                info!("RUST_PORT not set, using default");
-            })
-            .unwrap_or_else(|_| "8080".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_PORT value".into()))?;
-
-        let svelte_url = var("SVELTE_URL")
-            .inspect_err(|_| {
-                info!("SVELTE_URL not set, using default");
-            })
-            .unwrap_or_else(|_| "http://localhost:5173".into());
-
-        let max_sessions = var("RUST_MAX_SESSIONS")
-            .inspect_err(|_| {
-                info!("RUST_MAX_SESSIONS not set, using default");
-            })
-            .unwrap_or_else(|_| "2".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_MAX_SESSIONS value".into()))?;
-
-        let auth_lock_duration_seconds = var("RUST_AUTH_LOCK_DURATION_SECS")
-            .inspect_err(|_| {
-                info!("RUST_AUTH_LOCK_DURATION_SECS not set, using default");
-            })
-            .unwrap_or_else(|_| "1800".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_AUTH_LOCK_DURATION_SECS value".into()))?;
-
-        let auth_max_attempts = var("RUST_AUTH_MAX_ATTEMPTS")
-            .inspect_err(|_| {
-                info!("RUST_AUTH_MAX_ATTEMPTS not set, using default");
-            })
-            .unwrap_or_else(|_| "15".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_AUTH_MAX_ATTEMPTS value".into()))?;
-
-        let verify_lock_duration_seconds = var("RUST_VERIFY_LOCK_DURATION_SECS")
-            .inspect_err(|_| {
-                info!("RUST_VERIFY_LOCK_DURATION_SECS not set, using default");
-            })
-            .unwrap_or_else(|_| "600".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_VERIFY_LOCK_DURATION_SECS value".into()))?;
-
-        let verify_max_attempts = var("RUST_VERIFY_MAX_ATTEMPTS")
-            .inspect_err(|_| {
-                info!("RUST_VERIFY_MAX_ATTEMPTS not set, using default");
-            })
-            .unwrap_or_else(|_| "3".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_VERIFY_MAX_ATTEMPTS value".into()))?;
-
-        let temporary_session_duration_seconds = var("PUBLIC_TEMP_SESSION_DURATION_SECS")
-            .inspect_err(|_| {
-                info!("PUBLIC_TEMP_SESSION_DURATION_SECS not set, using default");
-            })
-            .unwrap_or_else(|_| "600".into())
-            .parse()
-            .map_err(|_| {
-                AppError::Config("Invalid PUBLIC_TEMP_SESSION_DURATION_SECS value".into())
-            })?;
-
-        let session_duration_seconds = var("RUST_SESSION_DURATION_SECS")
-            .inspect_err(|_| {
-                info!("RUST_SESSION_DURATION_SECS not set, using default");
-            })
-            .unwrap_or_else(|_| "3600".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_SESSION_DURATION_SECS value".into()))?;
-
-        let max_codes = var("RUST_MAX_CODES")
-            .inspect_err(|_| {
-                info!("RUST_MAX_CODES not set, using default");
-            })
-            .unwrap_or_else(|_| "5".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_MAX_CODES value".into()))?;
-
-        let max_codes_duration_seconds = var("RUST_MAX_CODES_DURATION_SECS")
-            .inspect_err(|_| {
-                info!("RUST_MAX_CODES_DURATION_SECS not set, using default");
-            })
-            .unwrap_or_else(|_| "1800".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_MAX_CODES_DURATION_SECS value".into()))?;
-
-        let max_items = var("RUST_MAX_ITEMS")
-            .inspect_err(|_| {
-                info!("RUST_MAX_ITEMS not set, using default");
-            })
-            .unwrap_or_else(|_| "15".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_MAX_ITEMS value".into()))?;
-
-        let from_email = read_secret("RUST_FROM_EMAIL")
-            .inspect_err(|_| {
-                info!("RUST_FROM_EMAIL not set, using default");
-            })
-            .unwrap_or_else(|_| "WeAreInTroubleGoodnessGracious".into());
-
-        let from_email_server = read_secret("RUST_FROM_EMAIL_SERVER")
-            .inspect_err(|_| {
-                info!("RUST_FROM_EMAIL_SERVER not set, using default");
-            })
-            .unwrap_or_else(|_| "ohdear".into());
-
-        let from_email_password = read_secret("RUST_FROM_EMAIL_PASSWORD")
-            .inspect_err(|_| {
-                info!("RUST_FROM_EMAIL_PASSWORD not set, using default");
-            })
-            .unwrap_or_else(|_| "its so over".into());
-
-        // Rust Bot Variables
-
-        let bot_num_pictures = var("RUST_BOT_NUM_PICTURES")
-            .inspect_err(|_| {
-                info!("RUST_BOT_NUM_PICTURES not set, using default");
-            })
-            .unwrap_or_else(|_| "4".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_BOT_NUM_PICTURES value".into()))?;
-
-        let bot_pictures_ttl = var("RUST_BOT_PICTURES_TTL")
-            .inspect_err(|_| {
-                info!("RUST_BOT_PICTURES_TTL not set, using default");
-            })
-            .unwrap_or_else(|_| "86400".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_BOT_PICTURES_TTL value".into()))?;
-
-        let bot_max_bytes = var("RUST_BOT_MAX_BYTES")
-            .inspect_err(|_| {
-                info!("RUST_BOT_MAX_BYTES not set, using default");
-            })
-            .unwrap_or_else(|_| "5_242_880".into())
-            .parse()
-            .map_err(|_| AppError::Config("Invalid RUST_BOT_MAX_BYTES value".into()))?;
-
-        let bot_photo_url = var("RUST_BOT_PHOTO_URL")
-            .inspect_err(|_| {
-                info!("RUST_BOT_PHOTO_URL not set, using default");
-            })
-            .unwrap_or_else(|_| "https://boiler/photos".into());
-
         Ok(Self {
-            rust_port,
-            svelte_url,
-            from_email,
-            from_email_server,
-            from_email_password,
-            max_sessions,
-            auth_max_attempts,
-            auth_lock_duration_seconds,
-            verify_max_attempts,
-            verify_lock_duration_seconds,
-            temporary_session_duration_seconds,
-            session_duration_seconds,
-            max_codes,
-            max_codes_duration_seconds,
-            max_items,
-            bot_num_pictures,
-            bot_pictures_ttl,
-            bot_max_bytes,
-            bot_photo_url,
-            home_limit_ms,
+            server: Server::load()?,
+            email: Email::load()?,
+            authentication: Authentication::load()?,
+            session: Session::load()?,
+            website_specific: WebsiteSpecific::load()?,
+            bot: Bot::load()?,
         })
     }
 }
@@ -224,4 +155,15 @@ pub fn read_secret(secret_name: &str) -> Result<String, AppError> {
             warn!("Failed to read {} from file: {}", secret_name, e);
             AppError::IO(e)
         })
+}
+
+pub fn try_load<T: FromStr>(key: &str, default: &str) -> Result<T, AppError>
+where
+    T::Err: Display,
+{
+    var(key)
+        .inspect_err(|_| info!("{key} not set, using default: {default}"))
+        .unwrap_or_else(|_| default.to_string())
+        .parse()
+        .map_err(|e| AppError::Config(format!("Invalid {} value: {}", key, e)))
 }

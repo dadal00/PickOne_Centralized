@@ -1,9 +1,13 @@
-use super::{
-    database::{DatabaseQueries, convert_db_items},
-    models::ItemRow,
+use super::database::{
+    core::convert_db_items,
+    init::DatabaseQueries,
     schema::{columns::items, tables},
 };
-use crate::{AppError, config::read_secret};
+use crate::{
+    AppError,
+    api::models::ItemRow,
+    config::{read_secret, try_load},
+};
 use meilisearch_sdk::{
     client::*,
     settings::{MinWordSizeForTypos, Settings, TypoToleranceSettings},
@@ -11,7 +15,6 @@ use meilisearch_sdk::{
 use scylla::{client::session::Session, response::PagingState};
 use serde::Serialize;
 use std::{
-    env,
     marker::{Send, Sync},
     ops::ControlFlow,
     sync::{
@@ -20,7 +23,6 @@ use std::{
     },
 };
 use tokio::task::JoinHandle;
-use tracing::warn;
 use uuid::Uuid;
 
 pub async fn init_meilisearch(
@@ -34,10 +36,7 @@ pub async fn init_meilisearch(
     ),
     AppError,
 > {
-    let meili_url = env::var("MEILI_URL").unwrap_or_else(|_| {
-        warn!("Environment variable MEILI_URL not found, using default");
-        "http://meilisearch:7700".to_string()
-    });
+    let meili_url = try_load::<String>("MEILI_URL", "http://meilisearch:7700").unwrap();
     let meili_client =
         Arc::new(Client::new(meili_url, Some(read_secret("MEILI_ADMIN_KEY")?)).unwrap());
 
@@ -45,27 +44,7 @@ pub async fn init_meilisearch(
     let session_clone = database_session.clone();
     let queries_clone = database_queries.clone();
 
-    let settings = Settings::new()
-        .with_ranking_rules([
-            "words",
-            "typo",
-            "proximity",
-            "exactness",
-            "attribute",
-            "sort",
-        ])
-        .with_distinct_attribute(Some(items::ITEM_ID))
-        .with_searchable_attributes([items::TITLE, items::DESCRIPTION])
-        .with_filterable_attributes([items::ITEM_TYPE, items::CONDITION, items::LOCATION])
-        .with_typo_tolerance(TypoToleranceSettings {
-            enabled: Some(true),
-            disable_on_attributes: None,
-            disable_on_words: None,
-            min_word_size_for_typos: Some(MinWordSizeForTypos {
-                one_typo: Some(5),
-                two_typos: Some(9),
-            }),
-        });
+    let settings = init_settings();
 
     meili_client
         .index(tables::ITEMS)
@@ -173,4 +152,28 @@ pub async fn clear_index(meili_client: Arc<Client>, index_name: &str) -> anyhow:
         .wait_for_completion(&meili_client, None, None)
         .await?;
     Ok(())
+}
+
+fn init_settings() -> Settings {
+    Settings::new()
+        .with_ranking_rules([
+            "words",
+            "typo",
+            "proximity",
+            "exactness",
+            "attribute",
+            "sort",
+        ])
+        .with_distinct_attribute(Some(items::ITEM_ID))
+        .with_searchable_attributes([items::TITLE, items::DESCRIPTION])
+        .with_filterable_attributes([items::ITEM_TYPE, items::CONDITION, items::LOCATION])
+        .with_typo_tolerance(TypoToleranceSettings {
+            enabled: Some(true),
+            disable_on_attributes: None,
+            disable_on_words: None,
+            min_word_size_for_typos: Some(MinWordSizeForTypos {
+                one_typo: Some(5),
+                two_typos: Some(9),
+            }),
+        })
 }

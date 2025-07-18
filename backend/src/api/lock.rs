@@ -1,7 +1,9 @@
 use super::{
-    database::{check_lock, unlock_account, update_lock},
+    microservices::{
+        database::core::{check_lock, unlock_account, update_lock},
+        redis::{delete_all_sessions, try_get},
+    },
     models::{RedisAction, WebsitePath},
-    redis::{delete_all_sessions, try_get},
     verify::hash_password,
 };
 use crate::{AppError, AppState};

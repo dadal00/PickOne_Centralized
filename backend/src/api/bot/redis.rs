@@ -1,4 +1,4 @@
-use crate::{error::AppError, state::AppState};
+use crate::{AppError, AppState};
 use once_cell::sync::Lazy;
 use redis::Script;
 use redis::{AsyncTypedCommands, cmd};
@@ -40,8 +40,8 @@ pub async fn insert_user_photo_bytes(
     let length: u8 = INSERT_USER_PHOTO_BYTES_SCRIPT
         .key(format!("{}:{}", key_prefix, user_id))
         .arg(photo_bytes)
-        .arg(state.config.bot_num_pictures)
-        .arg(state.config.bot_pictures_ttl)
+        .arg(state.config.bot.num_pictures)
+        .arg(state.config.bot.pictures_ttl)
         .invoke_async(&mut state.redis_connection_manager.clone())
         .await?;
 
@@ -65,7 +65,7 @@ pub async fn insert_formatted_photo(
         .arg(user_id)
         .arg(photo_id)
         .arg(photo_bytes)
-        .arg(state.config.bot_pictures_ttl.to_string())
+        .arg(state.config.bot.pictures_ttl.to_string())
         .invoke_async(&mut state.redis_connection_manager.clone())
         .await?;
 

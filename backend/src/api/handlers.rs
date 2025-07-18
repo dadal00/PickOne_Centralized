@@ -1,12 +1,12 @@
 use super::{
     lock::{freeze_account, unfreeze_account},
+    microservices::redis::{
+        clear_all_keys, create_redis_account, get_redis_account, handle_item_insertion,
+        incr_metric, increment_lock_key, is_redis_locked, is_temporarily_locked_ms, remove_id,
+    },
     models::{
         Account, Action, ItemPayload, RedisAccount, RedisAction, RedisMetricAction, Token,
         WebsitePath,
-    },
-    redis::{
-        clear_all_keys, create_redis_account, get_redis_account, handle_item_insertion,
-        incr_metric, increment_lock_key, is_redis_locked, is_temporarily_locked_ms, remove_id,
     },
     sessions::{create_session, create_temporary_session, generate_cookie, get_cookie},
     twofactor::{CODE_REGEX, generate_code},
@@ -40,7 +40,7 @@ pub async fn visitors_handler(
         WebsitePath::Home.as_ref(),
         RedisAction::LockedTemporary.as_ref(),
         &get_hashed_ip(&headers, address.ip()),
-        state.config.home_limit_ms.into(),
+        state.config.website_specific.home_limit_ms.into(),
     )
     .await?
     {
@@ -85,7 +85,7 @@ pub async fn api_token_check(
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
     }
 
-    if origin.expect("is_none failed").as_bytes() != state.config.svelte_url.as_bytes() {
+    if origin.expect("is_none failed").as_bytes() != state.config.server.svelte_url.as_bytes() {
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
     }
 
@@ -149,7 +149,7 @@ pub async fn forgot_handler(
         WebsitePath::BoilerSwap.as_ref(),
         &failed_verify_key,
         &payload.token,
-        &state.config.verify_max_attempts,
+        &state.config.authentication.verify_max_attempts,
     )
     .await?
         || is_redis_locked(
@@ -157,7 +157,7 @@ pub async fn forgot_handler(
             WebsitePath::BoilerSwap.as_ref(),
             &code_key,
             &payload.token,
-            &state.config.max_codes,
+            &state.config.authentication.max_codes,
         )
         .await?
     {
@@ -329,7 +329,7 @@ pub async fn authenticate_handler(
         WebsitePath::BoilerSwap.as_ref(),
         &failed_auth_key,
         &payload.email,
-        &state.config.auth_max_attempts,
+        &state.config.authentication.auth_max_attempts,
     )
     .await?
         || is_redis_locked(
@@ -337,7 +337,7 @@ pub async fn authenticate_handler(
             WebsitePath::BoilerSwap.as_ref(),
             &code_key,
             &payload.email,
-            &state.config.max_codes,
+            &state.config.authentication.max_codes,
         )
         .await?
     {
@@ -350,8 +350,8 @@ pub async fn authenticate_handler(
             WebsitePath::BoilerSwap.as_ref(),
             &failed_auth_key,
             &payload.email,
-            &state.config.auth_lock_duration_seconds,
-            &state.config.auth_max_attempts,
+            &state.config.authentication.auth_lock_duration_seconds,
+            &state.config.authentication.auth_max_attempts,
         )
         .await?;
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
@@ -431,7 +431,7 @@ pub async fn post_item_handler(
         WebsitePath::BoilerSwap.as_ref(),
         RedisAction::LockedItems.as_ref(),
         &email.clone().expect("session creation faulty"),
-        &state.config.max_items,
+        &state.config.website_specific.max_items,
     )
     .await?
     {
@@ -493,7 +493,7 @@ pub async fn resend_handler(
         WebsitePath::BoilerSwap.as_ref(),
         &code_key,
         &redis_account.email,
-        &state.config.max_codes,
+        &state.config.authentication.max_codes,
     )
     .await?
     {

@@ -1,8 +1,8 @@
 use crate::{
     AppError, AppState,
     api::{
+        microservices::redis::try_get,
         models::{RedisAction, RedisMetricAction, VisitorPayload, WebsitePath},
-        redis::try_get,
     },
 };
 use axum::{Json, extract::State};

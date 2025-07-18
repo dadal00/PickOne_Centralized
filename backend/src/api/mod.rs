@@ -1,11 +1,8 @@
-pub mod consumer;
-pub mod database;
+pub mod bot;
 pub mod handlers;
 pub mod lock;
-pub mod meilisearch;
+pub mod microservices;
 pub mod models;
-pub mod redis;
-pub mod schema;
 pub mod sessions;
 pub mod twofactor;
 pub mod utilities;

@@ -1,14 +1,16 @@
 use crate::{
     api::{
-        database::start_cdc,
+        bot::{chat::start_bot, photo::photo_handler},
         handlers::{
             api_token_check, authenticate_handler, delete_handler, forgot_handler,
             post_item_handler, resend_handler, verify_handler, visitors_handler,
         },
+        microservices::{
+            cdc::start_cdc,
+            database::schema::{KEYSPACE, columns::items, tables},
+        },
         models::{RedisAction, WebsitePath},
-        schema::{KEYSPACE, columns::items, tables},
     },
-    bot::{chat::start_bot, photo::photo_handler},
     error::AppError,
     metrics::metrics_handler,
     signals::shutdown_signal,
@@ -27,7 +29,6 @@ use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
 
 mod api;
-mod bot;
 mod config;
 mod error;
 mod metrics;
@@ -49,13 +50,13 @@ async fn main() -> Result<(), AppError> {
     start_bot(state.clone()).await?;
 
     info!("Server configuration");
-    info!("rust_port = {}", state.config.rust_port);
-    info!("svelte_url = {}", state.config.svelte_url);
+    info!("rust_port = {}", state.config.server.rust_port);
+    info!("svelte_url = {}", state.config.server.svelte_url);
 
     let origin_state = state.clone();
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::predicate(move |origin, _req| {
-            origin.as_bytes() == origin_state.config.svelte_url.as_bytes()
+            origin.as_bytes() == origin_state.config.server.svelte_url.as_bytes()
         }))
         .allow_methods([Method::GET, Method::OPTIONS, Method::POST, Method::DELETE])
         .allow_headers([CONTENT_TYPE])
@@ -103,7 +104,7 @@ async fn main() -> Result<(), AppError> {
         .with_state(state.clone())
         .into_make_service_with_connect_info::<SocketAddr>();
 
-    let addr = format!("0.0.0.0:{}", state.config.rust_port);
+    let addr = format!("0.0.0.0:{}", state.config.server.rust_port);
     info!("Binding to {}", addr);
 
     let listener = TcpListener::bind(&addr).await?;
