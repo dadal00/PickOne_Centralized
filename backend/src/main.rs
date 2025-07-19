@@ -9,7 +9,7 @@ use crate::{
             cdc::start_cdc,
             database::schema::{KEYSPACE, columns::items, tables},
         },
-        models::{RedisAction, WebsitePath},
+        models::{RedisAction, WebsitePath, WebsiteRoute},
     },
     error::AppError,
     metrics::metrics_handler,
@@ -64,38 +64,74 @@ async fn main() -> Result<(), AppError> {
 
     let app = Router::new()
         .route(
-            &format!("/{}/api/visitors", WebsitePath::Home.as_ref()),
+            &format!(
+                "/{}/{}/visitors",
+                WebsitePath::Home.as_ref(),
+                WebsiteRoute::Api.as_ref()
+            ),
             post(visitors_handler),
         )
         .route(
-            &format!("/{}/api/authenticate", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+                WebsiteRoute::Authenticate.as_ref()
+            ),
             post(authenticate_handler),
         )
         .route(
-            &format!("/{}/api/verify", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+                WebsiteRoute::Verify.as_ref()
+            ),
             post(verify_handler),
         )
         .route(
-            &format!("/{}/api/delete", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+                WebsiteRoute::Delete.as_ref()
+            ),
             delete(delete_handler),
         )
         .route(
-            &format!("/{}/api/forgot", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+                WebsiteRoute::Forgot.as_ref()
+            ),
             post(forgot_handler),
         )
         .route(
-            &format!("/{}/api/post-item", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/post-item",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref()
+            ),
             post(post_item_handler),
         )
         .route(
-            &format!("/{}/api/resend", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+                WebsiteRoute::Resend.as_ref()
+            ),
             post(resend_handler),
         )
         .route(
             &format!("/{}/:id", WebsitePath::Photos.as_ref()),
             get(photo_handler),
         )
-        .route("/metrics", get(metrics_handler))
+        .route(
+            &format!("/{}", WebsiteRoute::Metrics.as_ref()),
+            get(metrics_handler),
+        )
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             api_token_check,

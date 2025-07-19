@@ -18,6 +18,7 @@ services:
         - PUBLIC_PAGE_SIZE=${PUBLIC_PAGE_SIZE}
         - PUBLIC_MIN_PASSWORD_LENGTH=${PUBLIC_MIN_PASSWORD_LENGTH}
         - PUBLIC_SVELTE_SWAP_ROOT=${PUBLIC_SVELTE_SWAP_ROOT}
+        - PUBLIC_SVELTE_ATTEND_ROOT=${PUBLIC_SVELTE_ATTEND_ROOT}
       context: ../frontend
     image: main_svelte:latest
 

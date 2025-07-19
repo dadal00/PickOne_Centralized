@@ -3,7 +3,10 @@ use crate::{
     AppError, AppState,
     api::{
         lock::check_locks,
-        models::{Action, ItemPayload, RedisAccount, RedisAction, VerifiedTokenResult},
+        models::{
+            Action, ItemPayload, RedisAccount, RedisAction, RedisMetricAction, VerifiedTokenResult,
+            WebsitePath,
+        },
         twofactor::generate_code,
         verify::{hash_password, verify_password},
     },
@@ -452,6 +455,24 @@ pub async fn is_temporarily_locked_ms(
 
 pub async fn incr_metric(state: Arc<AppState>, key: &str) -> Result<(), AppError> {
     state.redis_connection_manager.clone().incr(key, 1).await?;
+
+    Ok(())
+}
+
+pub async fn incr_visitors(
+    state: Arc<AppState>,
+    website_path: WebsitePath,
+) -> Result<(), AppError> {
+    incr_metric(
+        state.clone(),
+        &format!(
+            "{}:{}:{}",
+            website_path.as_ref(),
+            RedisAction::Metric.as_ref(),
+            RedisMetricAction::Visitors.as_ref()
+        ),
+    )
+    .await?;
 
     Ok(())
 }
