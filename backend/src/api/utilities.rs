@@ -1,9 +1,9 @@
 use super::{
-    microservices::redis::try_get,
+    microservices::redis::{incr_visitors, try_get},
     models::{RedisAction, VerifiedTokenResult, WebsitePath},
 };
-use crate::{AppError, AppState};
-use axum::http::header::HeaderMap;
+use crate::{AppError, AppState, WebsiteRoute};
+use axum::{extract::Request, http::header::HeaderMap};
 use sha2::{Digest, Sha256};
 use std::{net::IpAddr, sync::Arc};
 
@@ -71,4 +71,90 @@ pub async fn format_verified_result(
         redis_action,
         id,
     }))
+}
+
+pub async fn check_path(
+    state: Arc<AppState>,
+    request: &mut Request,
+) -> Result<Option<WebsitePath>, AppError> {
+    match request.uri().path() {
+        path if path.starts_with(&format!(
+            "/{}/{}",
+            WebsitePath::BoilerSwap.as_ref(),
+            WebsiteRoute::Api.as_ref()
+        )) =>
+        {
+            incr_visitors(state.clone(), WebsitePath::BoilerSwap).await?;
+
+            label_request(request, WebsitePath::BoilerSwap);
+
+            Ok(Some(WebsitePath::BoilerSwap))
+        }
+        path if path.starts_with(&format!(
+            "/{}/{}",
+            WebsitePath::Home.as_ref(),
+            WebsiteRoute::Api.as_ref()
+        )) =>
+        {
+            incr_visitors(state.clone(), WebsitePath::Home).await?;
+
+            Ok(Some(WebsitePath::Home))
+        }
+        _ => Ok(None),
+    }
+}
+
+fn label_request(request: &mut Request, website_path: WebsitePath) {
+    match request.uri().path() {
+        path if path
+            == format!(
+                "/{}/{}/{}",
+                website_path.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+                WebsiteRoute::Authenticate.as_ref()
+            )
+            || path
+                == format!(
+                    "/{}/{}/{}",
+                    website_path.as_ref(),
+                    WebsiteRoute::Api.as_ref(),
+                    WebsiteRoute::Verify.as_ref()
+                )
+            || path
+                == format!(
+                    "/{}/{}/{}",
+                    website_path.as_ref(),
+                    WebsiteRoute::Api.as_ref(),
+                    WebsiteRoute::Delete.as_ref()
+                )
+            || path
+                == format!(
+                    "/{}/{}/{}",
+                    website_path.as_ref(),
+                    WebsiteRoute::Api.as_ref(),
+                    WebsiteRoute::Forgot.as_ref()
+                )
+            || path
+                == format!(
+                    "/{}/{}/{}",
+                    website_path.as_ref(),
+                    WebsiteRoute::Api.as_ref(),
+                    WebsiteRoute::Resend.as_ref()
+                ) =>
+        {
+            request
+                .extensions_mut()
+                .insert(website_path.as_ref().to_string());
+        }
+        _ => {}
+    }
+}
+
+pub fn get_website_path(label: &str) -> WebsitePath {
+    match label {
+        _ if label == WebsitePath::BoilerSwap.as_ref() => WebsitePath::BoilerSwap,
+        _ => {
+            panic!("Added connection invalid")
+        }
+    }
 }

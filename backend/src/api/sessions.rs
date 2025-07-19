@@ -26,21 +26,25 @@ static COOKIES_TO_CLEAR: Lazy<Vec<&'static str>> = Lazy::new(|| {
     ]
 });
 
-pub static CLEARED_COOKIES_SWAP: Lazy<cookieCookieJar> = Lazy::new(|| {
+pub static CLEARED_COOKIES_SWAP: Lazy<cookieCookieJar> =
+    Lazy::new(|| cleared_cookies_for(WebsitePath::BoilerSwap));
+
+pub fn cleared_cookies_for(website_path: WebsitePath) -> cookieCookieJar {
     let mut jar = cookieCookieJar::new();
 
     for &old_cookie in COOKIES_TO_CLEAR.iter() {
         let expired = Cookie::build(old_cookie)
-            .path(format!("/{}", WebsitePath::BoilerSwap.as_ref()))
+            .path(format!("/{}", website_path.as_ref()))
             .http_only(true)
             .secure(true)
             .same_site(Strict)
             .max_age(Duration::seconds(0));
+
         jar.add(expired);
     }
 
     jar
-});
+}
 
 pub fn generate_cookie(
     key: &str,

@@ -196,7 +196,7 @@ pub type ItemRow<'a> = (Uuid, i8, &'a str, i8, i8, &'a str, i8, NaiveDate);
 
 pub type CronItemRow<'a> = (Uuid, NaiveDate);
 
-#[derive(EnumString, AsRefStr, PartialEq)]
+#[derive(EnumString, AsRefStr, PartialEq, Clone)]
 pub enum WebsitePath {
     #[strum(serialize = "swap")]
     BoilerSwap,
@@ -227,4 +227,28 @@ pub enum RedisMetricAction {
 
     #[strum(serialize = "items")]
     Items,
+}
+
+#[derive(EnumString, AsRefStr)]
+pub enum WebsiteRoute {
+    #[strum(serialize = "api")]
+    Api,
+
+    #[strum(serialize = "authenticate")]
+    Authenticate,
+
+    #[strum(serialize = "verify")]
+    Verify,
+
+    #[strum(serialize = "delete")]
+    Delete,
+
+    #[strum(serialize = "forgot")]
+    Forgot,
+
+    #[strum(serialize = "resend")]
+    Resend,
+
+    #[strum(serialize = "metrics")]
+    Metrics,
 }

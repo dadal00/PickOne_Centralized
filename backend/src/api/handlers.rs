@@ -2,23 +2,20 @@ use super::{
     lock::{freeze_account, unfreeze_account},
     microservices::redis::{
         clear_all_keys, create_redis_account, get_redis_account, handle_item_insertion,
-        incr_metric, increment_lock_key, is_redis_locked, is_temporarily_locked_ms, remove_id,
+        incr_visitors, increment_lock_key, is_redis_locked, is_temporarily_locked_ms, remove_id,
     },
-    models::{
-        Account, Action, ItemPayload, RedisAccount, RedisAction, RedisMetricAction, Token,
-        WebsitePath,
-    },
+    models::{Account, Action, ItemPayload, RedisAccount, RedisAction, Token, WebsitePath},
     sessions::{create_session, create_temporary_session, generate_cookie, get_cookie},
     twofactor::{CODE_REGEX, generate_code},
-    utilities::{get_hashed_ip, get_key},
+    utilities::{check_path, get_hashed_ip, get_key, get_website_path},
     verify::{
         CODE_LENGTH, validate_account, validate_email, validate_item, validate_password,
         verify_api_token, verify_token,
     },
 };
-use crate::{AppError, AppState, metrics::get_visitors_payload};
+use crate::{AppError, AppState, WebsiteRoute, metrics::get_visitors_payload};
 use axum::{
-    Json,
+    Extension, Json,
     extract::{ConnectInfo, Request, State},
     http::{
         StatusCode,
@@ -53,75 +50,36 @@ pub async fn visitors_handler(
 pub async fn api_token_check(
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
-    request: Request,
+    mut request: Request,
     next: Next,
 ) -> Result<impl IntoResponse, AppError> {
-    if request.uri().path() == "/metrics" {
+    if request.uri().path() == format!("/{}", WebsiteRoute::Metrics.as_ref()) {
         return Ok(next.run(request).await);
     }
-
     if request
         .uri()
         .path()
         .starts_with(&format!("/{}/", WebsitePath::Photos.as_ref()))
     {
-        incr_metric(
-            state.clone(),
-            &format!(
-                "{}:{}:{}",
-                WebsitePath::Photos.as_ref(),
-                RedisAction::Metric.as_ref(),
-                RedisMetricAction::Visitors.as_ref()
-            ),
-        )
-        .await?;
+        incr_visitors(state.clone(), WebsitePath::Photos).await?;
 
         return Ok(next.run(request).await);
     }
 
     let origin = headers.get(ORIGIN);
-
     if origin.is_none() {
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
     }
-
     if origin.expect("is_none failed").as_bytes() != state.config.server.svelte_url.as_bytes() {
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
     }
 
-    let website_path = match request.uri().path() {
-        path if path.starts_with(&format!("/{}/api", WebsitePath::BoilerSwap.as_ref())) => {
-            incr_metric(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    WebsitePath::BoilerSwap.as_ref(),
-                    RedisAction::Metric.as_ref(),
-                    RedisMetricAction::Visitors.as_ref()
-                ),
-            )
-            .await?;
+    let website_path = check_path(state.clone(), &mut request).await?;
+    if website_path.is_none() {
+        return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
+    }
 
-            WebsitePath::BoilerSwap
-        }
-        path if path.starts_with(&format!("/{}/api", WebsitePath::Home.as_ref())) => {
-            incr_metric(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    WebsitePath::Home.as_ref(),
-                    RedisAction::Metric.as_ref(),
-                    RedisMetricAction::Visitors.as_ref()
-                ),
-            )
-            .await?;
-
-            WebsitePath::Home
-        }
-        _ => return Ok((StatusCode::UNAUTHORIZED, "Invalid path").into_response()),
-    };
-
-    if verify_api_token(headers, website_path) {
+    if verify_api_token(headers, website_path.expect("is_none failed")) {
         return Ok(next.run(request).await);
     }
 
@@ -129,6 +87,7 @@ pub async fn api_token_check(
 }
 
 pub async fn forgot_handler(
+    Extension(label): Extension<String>,
     headers: HeaderMap,
     ConnectInfo(address): ConnectInfo<SocketAddr>,
     State(state): State<Arc<AppState>>,
@@ -138,6 +97,7 @@ pub async fn forgot_handler(
         return Ok(StatusCode::UNAUTHORIZED.into_response());
     }
 
+    let website_path = get_website_path(&label);
     let hashed_ip = get_hashed_ip(&headers, address.ip());
 
     let forgot_key = get_key(RedisAction::LockedForgot, &hashed_ip);
@@ -146,7 +106,7 @@ pub async fn forgot_handler(
 
     if is_redis_locked(
         state.clone(),
-        WebsitePath::BoilerSwap.as_ref(),
+        website_path.as_ref(),
         &failed_verify_key,
         &payload.token,
         &state.config.authentication.verify_max_attempts,
@@ -154,7 +114,7 @@ pub async fn forgot_handler(
     .await?
         || is_redis_locked(
             state.clone(),
-            WebsitePath::BoilerSwap.as_ref(),
+            website_path.as_ref(),
             &code_key,
             &payload.token,
             &state.config.authentication.max_codes,
@@ -181,7 +141,7 @@ pub async fn forgot_handler(
             RedisAction::Forgot,
             &Some(forgot_key),
             &Some(code_key),
-            WebsitePath::BoilerSwap,
+            website_path,
         )
         .await?,
     )
@@ -189,9 +149,11 @@ pub async fn forgot_handler(
 }
 
 pub async fn delete_handler(
+    Extension(label): Extension<String>,
     headers: HeaderMap,
     State(state): State<Arc<AppState>>,
 ) -> Result<impl IntoResponse, AppError> {
+    let website_path = get_website_path(&label);
     let id = get_cookie(&headers, RedisAction::Session.as_ref());
 
     if id.is_some() {
@@ -206,14 +168,11 @@ pub async fn delete_handler(
             .await?;
     }
 
-    Ok((
-        StatusCode::OK,
-        generate_cookie("", "", 0, WebsitePath::BoilerSwap),
-    )
-        .into_response())
+    Ok((StatusCode::OK, generate_cookie("", "", 0, website_path)).into_response())
 }
 
 pub async fn verify_handler(
+    Extension(label): Extension<String>,
     headers: HeaderMap,
     ConnectInfo(address): ConnectInfo<SocketAddr>,
     State(state): State<Arc<AppState>>,
@@ -244,6 +203,7 @@ pub async fn verify_handler(
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
     }
 
+    let website_path = get_website_path(&label);
     let hashed_ip = get_hashed_ip(&headers, address.ip());
 
     let forgot_key = get_key(RedisAction::LockedForgot, &hashed_ip);
@@ -257,14 +217,14 @@ pub async fn verify_handler(
         &payload.token,
         RedisAction::LockedTemporary,
         &failed_verify_key,
-        WebsitePath::BoilerSwap.as_ref(),
+        website_path.as_ref(),
     )
     .await?
     {
         Some(account) => {
             clear_all_keys(
                 state.clone(),
-                WebsitePath::BoilerSwap.as_ref(),
+                website_path.as_ref(),
                 &[&code_key, &forgot_key, &failed_auth_key, &failed_verify_key],
                 &account.email,
             )
@@ -277,7 +237,7 @@ pub async fn verify_handler(
     };
 
     if verified_result.redis_action == RedisAction::Forgot {
-        freeze_account(state.clone(), &redis_account.email, WebsitePath::BoilerSwap).await?;
+        freeze_account(state.clone(), &redis_account.email, website_path.clone()).await?;
 
         return Ok((
             StatusCode::OK,
@@ -288,7 +248,7 @@ pub async fn verify_handler(
                 RedisAction::Update,
                 &None,
                 &None,
-                WebsitePath::BoilerSwap,
+                website_path,
             )
             .await?,
         )
@@ -306,7 +266,7 @@ pub async fn verify_handler(
             &redis_account,
             RedisAction::Session,
             RedisAction::SessionStore,
-            WebsitePath::BoilerSwap,
+            website_path,
         )
         .await?,
     )
@@ -314,11 +274,13 @@ pub async fn verify_handler(
 }
 
 pub async fn authenticate_handler(
+    Extension(label): Extension<String>,
     headers: HeaderMap,
     ConnectInfo(address): ConnectInfo<SocketAddr>,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<Account>,
 ) -> Result<impl IntoResponse, AppError> {
+    let website_path = get_website_path(&label);
     let hashed_ip = get_hashed_ip(&headers, address.ip());
 
     let failed_auth_key = get_key(RedisAction::LockedAuth, &hashed_ip);
@@ -326,7 +288,7 @@ pub async fn authenticate_handler(
 
     if is_redis_locked(
         state.clone(),
-        WebsitePath::BoilerSwap.as_ref(),
+        website_path.as_ref(),
         &failed_auth_key,
         &payload.email,
         &state.config.authentication.auth_max_attempts,
@@ -334,7 +296,7 @@ pub async fn authenticate_handler(
     .await?
         || is_redis_locked(
             state.clone(),
-            WebsitePath::BoilerSwap.as_ref(),
+            website_path.as_ref(),
             &code_key,
             &payload.email,
             &state.config.authentication.max_codes,
@@ -347,7 +309,7 @@ pub async fn authenticate_handler(
     if payload.action == Action::Forgot {
         increment_lock_key(
             state.clone(),
-            WebsitePath::BoilerSwap.as_ref(),
+            website_path.as_ref(),
             &failed_auth_key,
             &payload.email,
             &state.config.authentication.auth_lock_duration_seconds,
@@ -367,7 +329,7 @@ pub async fn authenticate_handler(
         &payload.email,
         &payload.password,
         &failed_auth_key,
-        WebsitePath::BoilerSwap.as_ref(),
+        website_path.as_ref(),
     )
     .await?
     {
@@ -376,7 +338,7 @@ pub async fn authenticate_handler(
                 state.clone(),
                 &format!(
                     "{}:{}:{}",
-                    WebsitePath::BoilerSwap.as_ref(),
+                    website_path.as_ref(),
                     &failed_auth_key,
                     &payload.email
                 ),
@@ -398,7 +360,7 @@ pub async fn authenticate_handler(
             RedisAction::Auth,
             &None,
             &Some(code_key),
-            WebsitePath::BoilerSwap,
+            website_path,
         )
         .await?,
     )
@@ -450,6 +412,7 @@ pub async fn post_item_handler(
 }
 
 pub async fn resend_handler(
+    Extension(label): Extension<String>,
     headers: HeaderMap,
     ConnectInfo(address): ConnectInfo<SocketAddr>,
     State(state): State<Arc<AppState>>,
@@ -472,11 +435,12 @@ pub async fn resend_handler(
         return Ok((StatusCode::UNAUTHORIZED, "Invalid Credentials").into_response());
     }
 
+    let website_path = get_website_path(&label);
     remove_id(
         state.clone(),
         &format!(
             "{}:{}:{}",
-            WebsitePath::BoilerSwap.as_ref(),
+            website_path.as_ref(),
             verified_result.redis_action.as_ref(),
             &verified_result.id
         ),
@@ -490,7 +454,7 @@ pub async fn resend_handler(
 
     if is_redis_locked(
         state.clone(),
-        WebsitePath::BoilerSwap.as_ref(),
+        website_path.as_ref(),
         &code_key,
         &redis_account.email,
         &state.config.authentication.max_codes,
@@ -509,7 +473,7 @@ pub async fn resend_handler(
             verified_result.redis_action,
             &None,
             &Some(code_key),
-            WebsitePath::BoilerSwap,
+            website_path,
         )
         .await?,
     )
