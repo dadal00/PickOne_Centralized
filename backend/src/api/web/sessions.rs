@@ -1,0 +1,338 @@
+use super::{
+    cookies::generate_cookie,
+    lock::check_locks,
+    twofactor::generate_code,
+    twofactor::spawn_code_task,
+    verify::{hash_password, verify_password},
+};
+use crate::{
+    AppError, AppState,
+    api::{
+        microservices::{
+            database::core::{get_user, insert_user},
+            redis::{
+                clear_all_keys, increment_lock_key, insert_id, insert_session, is_redis_locked,
+                is_temporarily_locked, remove_id,
+            },
+        },
+        models::{Account, Action, RedisAccount, RedisAction, VerifiedTokenResult, WebsitePath},
+        utilities::get_key,
+    },
+};
+use axum::http::header::HeaderMap;
+use chrono::Utc;
+use std::sync::Arc;
+use tokio::task::spawn_blocking;
+use uuid::Uuid;
+
+pub async fn create_temporary_session(
+    state: Arc<AppState>,
+    result: &Option<String>,
+    redis_account: &RedisAccount,
+    redis_action: RedisAction,
+    forgot_key: &Option<String>,
+    code_key: &Option<String>,
+    website_path: WebsitePath,
+) -> Result<HeaderMap, AppError> {
+    if redis_action != RedisAction::Update {
+        spawn_code_task(
+            state.clone(),
+            redis_account.email.clone(),
+            redis_account.code.clone(),
+            forgot_key.clone(),
+            website_path.as_ref().to_string(),
+        );
+
+        increment_lock_key(
+            state.clone(),
+            website_path.as_ref(),
+            code_key.as_ref().unwrap(),
+            &redis_account.email.clone(),
+            &state.config.authentication.max_codes_duration_seconds,
+            &state.config.authentication.max_codes,
+        )
+        .await?;
+    }
+
+    let serialized = match result {
+        Some(result) => result,
+        None => &serde_json::to_string(&redis_account)?,
+    };
+
+    let id = Uuid::new_v4().to_string();
+
+    insert_id(
+        state.clone(),
+        &format!(
+            "{}:{}:{}",
+            website_path.as_ref(),
+            redis_action.as_ref(),
+            &id
+        ),
+        serialized,
+        state
+            .config
+            .session
+            .temporary_session_duration_seconds
+            .into(),
+    )
+    .await?;
+
+    Ok(generate_cookie(
+        redis_action.as_ref(),
+        &id,
+        state
+            .config
+            .session
+            .temporary_session_duration_seconds
+            .into(),
+        website_path,
+    ))
+}
+
+pub async fn create_session(
+    state: Arc<AppState>,
+    redis_account: &RedisAccount,
+    website_path: WebsitePath,
+) -> Result<HeaderMap, AppError> {
+    if redis_account.action == Action::Signup {
+        insert_user(state.clone(), redis_account.clone()).await?;
+    }
+
+    let session_id = Uuid::new_v4().to_string();
+
+    insert_session(
+        state.clone(),
+        website_path.as_ref(),
+        RedisAction::Session.as_ref(),
+        &session_id,
+        RedisAction::SessionStore.as_ref(),
+        &redis_account.email,
+    )
+    .await?;
+
+    Ok(generate_cookie(
+        RedisAction::Session.as_ref(),
+        &session_id,
+        state.config.session.session_duration_seconds.into(),
+        website_path,
+    ))
+}
+
+pub async fn try_create_redis_account(
+    state: Arc<AppState>,
+    hashed_ip: &str,
+    website_path: &str,
+    payload: &Account,
+) -> Result<RedisAccount, AppError> {
+    match create_redis_account(
+        state.clone(),
+        payload.action.clone(),
+        &payload.email,
+        &payload.password,
+        &get_key(RedisAction::LockedAuth, hashed_ip),
+        website_path,
+    )
+    .await?
+    {
+        Some(account) => {
+            remove_id(
+                state.clone(),
+                &format!(
+                    "{}:{}:{}",
+                    website_path,
+                    &get_key(RedisAction::LockedAuth, hashed_ip),
+                    &payload.email
+                ),
+            )
+            .await?;
+
+            Ok(account)
+        }
+        None => Err(AppError::Unauthorized("Unable to verify".to_string())),
+    }
+}
+
+pub async fn get_redis_account(
+    state: Arc<AppState>,
+    verified_result: &VerifiedTokenResult,
+    code: &str,
+    redis_action_secondary: RedisAction,
+    failed_verify_key: &str,
+    website_path: &str,
+) -> Result<Option<RedisAccount>, AppError> {
+    match &verified_result.serialized_account {
+        Some(serialized) => {
+            if is_temporarily_locked(
+                state.clone(),
+                website_path,
+                redis_action_secondary.as_ref(),
+                &verified_result.id,
+                1,
+            )
+            .await?
+            {
+                return Ok(None);
+            }
+
+            let deserialized: RedisAccount = serde_json::from_str(serialized)?;
+
+            if is_redis_locked(
+                state.clone(),
+                website_path,
+                failed_verify_key,
+                &deserialized.email,
+                &state.config.authentication.verify_max_attempts,
+            )
+            .await?
+            {
+                return Ok(None);
+            }
+
+            let locked = match verified_result.redis_action {
+                RedisAction::Auth => {
+                    check_locks(
+                        state.clone(),
+                        &deserialized.email,
+                        deserialized.issued_timestamp.expect("auth account"),
+                        website_path,
+                    )
+                    .await?
+                }
+                _ => false,
+            };
+
+            if !locked
+                && verified_result.redis_action != RedisAction::Update
+                && code != deserialized.code
+            {
+                increment_lock_key(
+                    state.clone(),
+                    website_path,
+                    failed_verify_key,
+                    &deserialized.email,
+                    &state.config.authentication.verify_lock_duration_seconds,
+                    &state.config.authentication.verify_max_attempts,
+                )
+                .await?;
+                return Ok(None);
+            }
+
+            remove_id(
+                state.clone(),
+                &format!(
+                    "{}:{}:{}",
+                    website_path,
+                    verified_result.redis_action.as_ref(),
+                    &verified_result.id
+                ),
+            )
+            .await?;
+
+            if locked {
+                return Ok(None);
+            }
+
+            Ok(Some(deserialized))
+        }
+        None => Ok(None),
+    }
+}
+
+pub async fn create_redis_account(
+    state: Arc<AppState>,
+    action: Action,
+    email: &str,
+    password: &str,
+    failed_auth_key: &str,
+    website_path: &str,
+) -> Result<Option<RedisAccount>, AppError> {
+    match get_user(state.clone(), email).await? {
+        None => {
+            if action == Action::Login {
+                return Ok(None);
+            }
+
+            let password_owned = password.to_owned();
+
+            let password_hash = spawn_blocking(move || hash_password(&password_owned)).await?;
+
+            Ok(Some(RedisAccount {
+                email: email.to_string(),
+                action: action.clone(),
+                code: generate_code().clone(),
+                issued_timestamp: Some(Utc::now().timestamp_millis()),
+                password_hash: Some(password_hash),
+            }))
+        }
+        Some((hash, locked)) => {
+            let plaintext = password.to_owned();
+
+            let hash = hash.to_owned();
+
+            if action == Action::Signup || locked {
+                return Ok(None);
+            }
+
+            if action == Action::Login
+                && !spawn_blocking(move || verify_password(&plaintext, &hash)).await?
+            {
+                increment_lock_key(
+                    state.clone(),
+                    website_path,
+                    failed_auth_key,
+                    email,
+                    &state.config.authentication.auth_lock_duration_seconds,
+                    &state.config.authentication.auth_max_attempts,
+                )
+                .await?;
+                return Ok(None);
+            }
+
+            Ok(Some(RedisAccount {
+                email: email.to_string(),
+                action: action.clone(),
+                code: generate_code().clone(),
+                issued_timestamp: Some(Utc::now().timestamp_millis()),
+                password_hash: None,
+            }))
+        }
+    }
+}
+
+pub async fn try_get_redis_account(
+    state: Arc<AppState>,
+    verified_result: &VerifiedTokenResult,
+    token: &str,
+    hashed_ip: &str,
+    website_path: &str,
+) -> Result<RedisAccount, AppError> {
+    match get_redis_account(
+        state.clone(),
+        verified_result,
+        token,
+        RedisAction::LockedTemporary,
+        &get_key(RedisAction::LockedVerify, hashed_ip),
+        website_path,
+    )
+    .await?
+    {
+        Some(account) => {
+            clear_all_keys(
+                state.clone(),
+                website_path,
+                &[
+                    &get_key(RedisAction::LockedCode, hashed_ip),
+                    &get_key(RedisAction::LockedForgot, hashed_ip),
+                    &get_key(RedisAction::LockedAuth, hashed_ip),
+                    &get_key(RedisAction::LockedVerify, hashed_ip),
+                ],
+                &account.email,
+            )
+            .await?;
+
+            Ok(account)
+        }
+        None => Err(AppError::Unauthorized("Unable to verify".to_string())),
+    }
+}

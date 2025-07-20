@@ -1,25 +1,15 @@
-use super::database::core::{get_user, insert_item};
+use super::database::core::insert_item;
 use crate::{
     AppError, AppState,
-    api::{
-        lock::check_locks,
-        models::{
-            Action, ItemPayload, RedisAccount, RedisAction, RedisMetricAction, VerifiedTokenResult,
-            WebsitePath,
-        },
-        twofactor::generate_code,
-        verify::{hash_password, verify_password},
-    },
+    api::models::{ItemPayload, RedisAction, RedisMetricAction, WebsitePath},
     config::try_load,
 };
-use chrono::Utc;
 use once_cell::sync::Lazy;
 use redis::{
     AsyncTypedCommands, Client, Script,
     aio::{ConnectionManager, ConnectionManagerConfig},
 };
 use std::{sync::Arc, time::Duration};
-use tokio::task::spawn_blocking;
 
 static FAILED_ATTEMPTS_SCRIPT: Lazy<Script> = Lazy::new(|| {
     Script::new(
@@ -182,153 +172,6 @@ pub async fn is_temporarily_locked(
 
 pub async fn try_get(state: Arc<AppState>, key: &str) -> Result<Option<String>, AppError> {
     Ok(state.redis_connection_manager.clone().get(key).await?)
-}
-
-pub async fn get_redis_account(
-    state: Arc<AppState>,
-    verified_result: &VerifiedTokenResult,
-    code: &str,
-    redis_action_secondary: RedisAction,
-    failed_verify_key: &str,
-    website_path: &str,
-) -> Result<Option<RedisAccount>, AppError> {
-    match &verified_result.serialized_account {
-        Some(serialized) => {
-            if is_temporarily_locked(
-                state.clone(),
-                website_path,
-                redis_action_secondary.as_ref(),
-                &verified_result.id,
-                1,
-            )
-            .await?
-            {
-                return Ok(None);
-            }
-
-            let deserialized: RedisAccount = serde_json::from_str(serialized)?;
-
-            if is_redis_locked(
-                state.clone(),
-                website_path,
-                failed_verify_key,
-                &deserialized.email,
-                &state.config.authentication.verify_max_attempts,
-            )
-            .await?
-            {
-                return Ok(None);
-            }
-
-            let locked = match verified_result.redis_action {
-                RedisAction::Auth => {
-                    check_locks(
-                        state.clone(),
-                        &deserialized.email,
-                        deserialized.issued_timestamp.expect("auth account"),
-                        website_path,
-                    )
-                    .await?
-                }
-                _ => false,
-            };
-
-            if !locked
-                && verified_result.redis_action != RedisAction::Update
-                && code != deserialized.code
-            {
-                increment_lock_key(
-                    state.clone(),
-                    website_path,
-                    failed_verify_key,
-                    &deserialized.email,
-                    &state.config.authentication.verify_lock_duration_seconds,
-                    &state.config.authentication.verify_max_attempts,
-                )
-                .await?;
-                return Ok(None);
-            }
-
-            remove_id(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    website_path,
-                    verified_result.redis_action.as_ref(),
-                    &verified_result.id
-                ),
-            )
-            .await?;
-
-            if locked {
-                return Ok(None);
-            }
-
-            Ok(Some(deserialized))
-        }
-        None => Ok(None),
-    }
-}
-
-pub async fn create_redis_account(
-    state: Arc<AppState>,
-    action: Action,
-    email: &str,
-    password: &str,
-    failed_auth_key: &str,
-    website_path: &str,
-) -> Result<Option<RedisAccount>, AppError> {
-    match get_user(state.clone(), email).await? {
-        None => {
-            if action == Action::Login {
-                return Ok(None);
-            }
-
-            let password_owned = password.to_owned();
-
-            let password_hash = spawn_blocking(move || hash_password(&password_owned)).await??;
-
-            Ok(Some(RedisAccount {
-                email: email.to_string(),
-                action: action.clone(),
-                code: generate_code().clone(),
-                issued_timestamp: Some(Utc::now().timestamp_millis()),
-                password_hash: Some(password_hash),
-            }))
-        }
-        Some((hash, locked)) => {
-            let plaintext = password.to_owned();
-
-            let hash = hash.to_owned();
-
-            if action == Action::Signup || locked {
-                return Ok(None);
-            }
-
-            if action == Action::Login
-                && !spawn_blocking(move || verify_password(&plaintext, &hash)).await??
-            {
-                increment_lock_key(
-                    state.clone(),
-                    website_path,
-                    failed_auth_key,
-                    email,
-                    &state.config.authentication.auth_lock_duration_seconds,
-                    &state.config.authentication.auth_max_attempts,
-                )
-                .await?;
-                return Ok(None);
-            }
-
-            Ok(Some(RedisAccount {
-                email: email.to_string(),
-                action: action.clone(),
-                code: generate_code().clone(),
-                issued_timestamp: Some(Utc::now().timestamp_millis()),
-                password_hash: None,
-            }))
-        }
-    }
 }
 
 pub async fn increment_lock_key(

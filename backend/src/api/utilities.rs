@@ -37,7 +37,7 @@ pub fn convert_i8_to_u8(payload: &i8) -> u8 {
 
 pub async fn format_verified_result(
     state: Arc<AppState>,
-    website_path: WebsitePath,
+    website_path: &WebsitePath,
     redis_action: RedisAction,
     id: String,
 ) -> Result<Option<VerifiedTokenResult>, AppError> {

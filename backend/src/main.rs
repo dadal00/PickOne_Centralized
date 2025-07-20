@@ -1,15 +1,19 @@
 use crate::{
     api::{
         bot::{chat::start_bot, photo::photo_handler},
-        handlers::{
-            api_token_check, authenticate_handler, delete_handler, forgot_handler,
-            post_item_handler, resend_handler, verify_handler, visitors_handler,
-        },
         microservices::{
             cdc::start_cdc,
             database::schema::{KEYSPACE, columns::items, tables},
         },
-        models::{RedisAction, WebsitePath, WebsiteRoute},
+        models::{METRICS_ROUTE, RedisAction, WebsitePath, WebsiteRoute},
+        web::{
+            handlers::{
+                api_token_check, authenticate_handler, delete_handler, forgot_handler,
+                resend_handler, verify_handler,
+            },
+            home::visitors_handler,
+            swap::post_item_handler,
+        },
     },
     error::AppError,
     metrics::metrics_handler,
@@ -128,10 +132,7 @@ async fn main() -> Result<(), AppError> {
             &format!("/{}/:id", WebsitePath::Photos.as_ref()),
             get(photo_handler),
         )
-        .route(
-            &format!("/{}", WebsiteRoute::Metrics.as_ref()),
-            get(metrics_handler),
-        )
+        .route(METRICS_ROUTE, get(metrics_handler))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             api_token_check,

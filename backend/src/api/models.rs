@@ -35,7 +35,7 @@ pub enum Action {
     Forgot,
 }
 
-#[derive(EnumString, AsRefStr, PartialEq)]
+#[derive(EnumString, AsRefStr, PartialEq, Clone)]
 pub enum RedisAction {
     #[strum(serialize = "auth_id")]
     Auth,
@@ -248,7 +248,12 @@ pub enum WebsiteRoute {
 
     #[strum(serialize = "resend")]
     Resend,
+}
 
-    #[strum(serialize = "metrics")]
-    Metrics,
+pub const METRICS_ROUTE: &str = "/metrics";
+pub const PHOTOS_PREFIX: &str = "/photos/";
+
+pub struct LockCheck<'a> {
+    pub key: &'a str,
+    pub check: &'a u8,
 }
