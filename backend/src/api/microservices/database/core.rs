@@ -35,14 +35,14 @@ pub async fn get_user(
     }
 }
 
-pub async fn insert_user(state: Arc<AppState>, account: RedisAccount) -> Result<(), AppError> {
+pub async fn insert_user(state: Arc<AppState>, account: &RedisAccount) -> Result<(), AppError> {
     let fallback_page_state = PagingState::start();
 
     state
         .database_session
         .execute_single_page(
             &state.database_queries.insert_user,
-            (account.email, account.password_hash, false),
+            (account.email.clone(), account.password_hash.clone(), false),
             fallback_page_state,
         )
         .await?;

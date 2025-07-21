@@ -29,30 +29,20 @@ pub async fn create_temporary_session(
     state: Arc<AppState>,
     result: &Option<String>,
     redis_account: &RedisAccount,
-    redis_action: RedisAction,
+    redis_action: &RedisAction,
     forgot_key: &Option<String>,
     code_key: &Option<String>,
-    website_path: WebsitePath,
+    website_path: &WebsitePath,
 ) -> Result<HeaderMap, AppError> {
-    if redis_action != RedisAction::Update {
-        spawn_code_task(
-            state.clone(),
-            redis_account.email.clone(),
-            redis_account.code.clone(),
-            forgot_key.clone(),
-            website_path.as_ref().to_string(),
-        );
-
-        increment_lock_key(
-            state.clone(),
-            website_path.as_ref(),
-            code_key.as_ref().unwrap(),
-            &redis_account.email.clone(),
-            &state.config.authentication.max_codes_duration_seconds,
-            &state.config.authentication.max_codes,
-        )
-        .await?;
-    }
+    send_code(
+        state.clone(),
+        redis_action,
+        redis_account,
+        forgot_key,
+        code_key,
+        website_path.as_ref(),
+    )
+    .await?;
 
     let serialized = match result {
         Some(result) => result,
@@ -86,8 +76,41 @@ pub async fn create_temporary_session(
             .session
             .temporary_session_duration_seconds
             .into(),
-        website_path,
+        website_path.clone(),
     ))
+}
+
+async fn send_code(
+    state: Arc<AppState>,
+    redis_action: &RedisAction,
+    redis_account: &RedisAccount,
+    forgot_key: &Option<String>,
+    code_key: &Option<String>,
+    website_path: &str,
+) -> Result<(), AppError> {
+    if *redis_action == RedisAction::Update {
+        return Ok(());
+    }
+
+    spawn_code_task(
+        state.clone(),
+        redis_account.email.clone(),
+        redis_account.code.clone(),
+        forgot_key.clone(),
+        website_path.to_string(),
+    );
+
+    increment_lock_key(
+        state.clone(),
+        website_path,
+        code_key.as_ref().unwrap(),
+        &redis_account.email,
+        &state.config.authentication.max_codes_duration_seconds,
+        &state.config.authentication.max_codes,
+    )
+    .await?;
+
+    Ok(())
 }
 
 pub async fn create_session(
@@ -96,7 +119,7 @@ pub async fn create_session(
     website_path: WebsitePath,
 ) -> Result<HeaderMap, AppError> {
     if redis_account.action == Action::Signup {
-        insert_user(state.clone(), redis_account.clone()).await?;
+        insert_user(state.clone(), redis_account).await?;
     }
 
     let session_id = Uuid::new_v4().to_string();
@@ -125,32 +148,26 @@ pub async fn try_create_redis_account(
     website_path: &str,
     payload: &Account,
 ) -> Result<RedisAccount, AppError> {
-    match create_redis_account(
+    let lock_key = get_key(RedisAction::LockedAuth, hashed_ip);
+
+    let account = create_redis_account(
         state.clone(),
         payload.action.clone(),
         &payload.email,
         &payload.password,
-        &get_key(RedisAction::LockedAuth, hashed_ip),
+        &lock_key,
         website_path,
     )
     .await?
-    {
-        Some(account) => {
-            remove_id(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    website_path,
-                    &get_key(RedisAction::LockedAuth, hashed_ip),
-                    &payload.email
-                ),
-            )
-            .await?;
+    .ok_or(AppError::Unauthorized("Unable to verify".to_string()))?;
 
-            Ok(account)
-        }
-        None => Err(AppError::Unauthorized("Unable to verify".to_string())),
-    }
+    remove_id(
+        state.clone(),
+        &format!("{}:{}:{}", website_path, &lock_key, &payload.email),
+    )
+    .await?;
+
+    Ok(account)
 }
 
 pub async fn get_redis_account(
@@ -161,82 +178,80 @@ pub async fn get_redis_account(
     failed_verify_key: &str,
     website_path: &str,
 ) -> Result<Option<RedisAccount>, AppError> {
-    match &verified_result.serialized_account {
-        Some(serialized) => {
-            if is_temporarily_locked(
-                state.clone(),
-                website_path,
-                redis_action_secondary.as_ref(),
-                &verified_result.id,
-                1,
-            )
-            .await?
-            {
-                return Ok(None);
-            }
+    let serialized = match &verified_result.serialized_account {
+        Some(s) => s,
+        None => return Ok(None),
+    };
 
-            let deserialized: RedisAccount = serde_json::from_str(serialized)?;
-
-            if is_redis_locked(
-                state.clone(),
-                website_path,
-                failed_verify_key,
-                &deserialized.email,
-                &state.config.authentication.verify_max_attempts,
-            )
-            .await?
-            {
-                return Ok(None);
-            }
-
-            let locked = match verified_result.redis_action {
-                RedisAction::Auth => {
-                    check_locks(
-                        state.clone(),
-                        &deserialized.email,
-                        deserialized.issued_timestamp.expect("auth account"),
-                        website_path,
-                    )
-                    .await?
-                }
-                _ => false,
-            };
-
-            if !locked
-                && verified_result.redis_action != RedisAction::Update
-                && code != deserialized.code
-            {
-                increment_lock_key(
-                    state.clone(),
-                    website_path,
-                    failed_verify_key,
-                    &deserialized.email,
-                    &state.config.authentication.verify_lock_duration_seconds,
-                    &state.config.authentication.verify_max_attempts,
-                )
-                .await?;
-                return Ok(None);
-            }
-
-            remove_id(
-                state.clone(),
-                &format!(
-                    "{}:{}:{}",
-                    website_path,
-                    verified_result.redis_action.as_ref(),
-                    &verified_result.id
-                ),
-            )
-            .await?;
-
-            if locked {
-                return Ok(None);
-            }
-
-            Ok(Some(deserialized))
-        }
-        None => Ok(None),
+    if is_temporarily_locked(
+        state.clone(),
+        website_path,
+        redis_action_secondary.as_ref(),
+        &verified_result.id,
+        1,
+    )
+    .await?
+    {
+        return Ok(None);
     }
+
+    let deserialized: RedisAccount = serde_json::from_str(serialized)?;
+
+    if is_redis_locked(
+        state.clone(),
+        website_path,
+        failed_verify_key,
+        &deserialized.email,
+        &state.config.authentication.verify_max_attempts,
+    )
+    .await?
+    {
+        return Ok(None);
+    }
+
+    let locked = match verified_result.redis_action {
+        RedisAction::Auth => {
+            check_locks(
+                state.clone(),
+                &deserialized.email,
+                deserialized.issued_timestamp.expect("auth account"),
+                website_path,
+            )
+            .await?
+        }
+        _ => false,
+    };
+
+    if !locked && verified_result.redis_action != RedisAction::Update && code != deserialized.code {
+        increment_lock_key(
+            state.clone(),
+            website_path,
+            failed_verify_key,
+            &deserialized.email,
+            &state.config.authentication.verify_lock_duration_seconds,
+            &state.config.authentication.verify_max_attempts,
+        )
+        .await?;
+
+        return Ok(None);
+    }
+
+    remove_id(
+        state.clone(),
+        &format!(
+            "{}:{}:{}",
+            website_path,
+            verified_result.redis_action.as_ref(),
+            &verified_result.id
+        ),
+    )
+    .await?;
+
+    if locked {
+        return Ok(None);
+    }
+
+    Ok(Some(deserialized))
 }
 
 pub async fn create_redis_account(

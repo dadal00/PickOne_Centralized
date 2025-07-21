@@ -81,10 +81,10 @@ pub async fn forgot_handler(
             state.clone(),
             &None,
             &redis_account,
-            RedisAction::Forgot,
+            &RedisAction::Forgot,
             &Some(get_key(RedisAction::LockedForgot, &hashed_ip)),
             &Some(get_key(RedisAction::LockedCode, &hashed_ip)),
-            website_path,
+            &website_path,
         )
         .await?,
     )
@@ -138,10 +138,10 @@ pub async fn verify_handler(
                     state.clone(),
                     &verified_result.serialized_account,
                     &redis_account,
-                    RedisAction::Update,
+                    &RedisAction::Update,
                     &None,
                     &None,
-                    website_path,
+                    &website_path,
                 )
                 .await?,
             )
@@ -183,10 +183,10 @@ pub async fn authenticate_handler(
             state.clone(),
             &None,
             &redis_account,
-            RedisAction::Auth,
+            &RedisAction::Auth,
             &None,
             &Some(get_key(RedisAction::LockedCode, &hashed_ip)),
-            website_path,
+            &website_path,
         )
         .await?,
     )
@@ -227,10 +227,10 @@ pub async fn resend_handler(
             state.clone(),
             &None,
             &redis_account,
-            verified_result.redis_action,
+            &verified_result.redis_action,
             &None,
             &Some(get_key(RedisAction::LockedCode, &hashed_ip)),
-            website_path,
+            &website_path,
         )
         .await?,
     )
