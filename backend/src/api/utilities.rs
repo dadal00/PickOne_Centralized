@@ -21,7 +21,6 @@ pub fn get_hashed_ip(headers: &HeaderMap, direct_ip: IpAddr) -> String {
         .unwrap_or_else(|| direct_ip.to_string());
 
     let mut hasher = Sha256::new();
-
     hasher.update(ip.as_bytes());
 
     format!("{:x}", hasher.finalize())
@@ -41,36 +40,25 @@ pub async fn format_verified_result(
     redis_action: RedisAction,
     id: String,
 ) -> Result<Option<VerifiedTokenResult>, AppError> {
-    if redis_action == RedisAction::Session {
-        if let Some(result) = try_get(
-            state.clone(),
-            &format!(
-                "{}:{}:{}",
-                WebsitePath::BoilerSwap.as_ref(),
-                RedisAction::Session.as_ref(),
-                &id
-            ),
-        )
-        .await?
-        {
-            return Ok(Some(VerifiedTokenResult {
-                serialized_account: Some(result),
-                redis_action: RedisAction::Session,
-                id,
-            }));
-        }
-        return Ok(None);
+    if let Some(serialized_account) = try_get(
+        state.clone(),
+        &format!(
+            "{}:{}:{}",
+            website_path.as_ref(),
+            redis_action.as_ref(),
+            &id
+        ),
+    )
+    .await?
+    {
+        return Ok(Some(VerifiedTokenResult {
+            serialized_account: Some(serialized_account),
+            redis_action,
+            id,
+        }));
     }
 
-    Ok(Some(VerifiedTokenResult {
-        serialized_account: try_get(
-            state.clone(),
-            &format!("{}:{}:{}", website_path.as_ref(), redis_action.as_ref(), id),
-        )
-        .await?,
-        redis_action,
-        id,
-    }))
+    Ok(None)
 }
 
 pub async fn check_path(

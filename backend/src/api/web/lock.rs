@@ -5,8 +5,8 @@ use crate::{
         microservices::{
             database::core::{check_lock, get_user, unlock_account, update_lock},
             redis::{
-                delete_all_sessions, increment_lock_key, is_redis_locked, is_temporarily_locked_ms,
-                remove_id, try_get,
+                delete_all_sessions, increment_lock_key, insert_id, is_redis_locked,
+                is_temporarily_locked_ms, remove_id, try_get,
             },
         },
         models::{
@@ -16,17 +16,13 @@ use crate::{
     },
 };
 use chrono::{Duration as chronoDuration, Utc};
-use redis::AsyncTypedCommands;
 use std::sync::Arc;
 use tokio::task::spawn_blocking;
 
 pub async fn check_db_lock(state: Arc<AppState>, email: &str) -> Result<bool, AppError> {
     let locked = check_lock(state.clone(), email).await?;
 
-    if locked.is_some() && locked.expect("is_some failed") {
-        return Ok(true);
-    }
-    Ok(false)
+    Ok(locked.unwrap_or(false))
 }
 
 pub async fn freeze_account(
@@ -38,15 +34,15 @@ pub async fn freeze_account(
         return Ok(());
     }
 
-    state
-        .redis_connection_manager
-        .clone()
-        .set_ex(
-            format!("{}:{}", RedisAction::LockedTime.as_ref(), &email),
-            (Utc::now() + chronoDuration::milliseconds(500)).timestamp_millis(),
-            900,
-        )
-        .await?;
+    insert_id(
+        state.clone(),
+        &format!("{}:{}", RedisAction::LockedTime.as_ref(), &email),
+        &(Utc::now() + chronoDuration::milliseconds(500))
+            .timestamp_millis()
+            .to_string(),
+        900,
+    )
+    .await?;
 
     update_lock(state.clone(), email, true).await?;
 
@@ -67,12 +63,14 @@ pub async fn unfreeze_account(
     email: &str,
     password: &str,
 ) -> Result<(), AppError> {
-    let password_owned = password.to_owned();
-
     unlock_account(
         state.clone(),
         email,
-        &spawn_blocking(move || hash_password(&password_owned)).await?,
+        &spawn_blocking({
+            let password_owned = password.to_owned();
+            move || hash_password(&password_owned)
+        })
+        .await?,
     )
     .await?;
 
@@ -294,5 +292,6 @@ pub async fn is_home_locked(state: Arc<AppState>, hashed_ip: &str) -> Result<(),
             "Too many requests from your ip".to_string(),
         ));
     }
+
     Ok(())
 }

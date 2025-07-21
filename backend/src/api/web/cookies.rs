@@ -11,7 +11,9 @@ use axum::http::{
     header::{HeaderMap, SET_COOKIE},
 };
 use axum_extra::extract::CookieJar;
-use cookie::{Cookie, CookieJar as cookieCookieJar, SameSite::Strict, time::Duration};
+use cookie::{
+    Cookie, CookieBuilder, CookieJar as cookieCookieJar, SameSite::Strict, time::Duration,
+};
 use once_cell::sync::Lazy;
 use std::sync::Arc;
 
@@ -31,12 +33,7 @@ pub fn cleared_cookies_for(website_path: WebsitePath) -> cookieCookieJar {
     let mut jar = cookieCookieJar::new();
 
     for &old_cookie in COOKIES_TO_CLEAR.iter() {
-        let expired = Cookie::build(old_cookie)
-            .path(format!("/{}", website_path.as_ref()))
-            .http_only(true)
-            .secure(true)
-            .same_site(Strict)
-            .max_age(Duration::seconds(0));
+        let expired = build_cookie(old_cookie, "0", website_path.as_ref(), 0);
 
         jar.add(expired);
     }
@@ -66,23 +63,15 @@ pub async fn remove_cookie(
     Ok(())
 }
 
-pub fn generate_cookie(key: &str, value: &str, ttl: i64, website_path: WebsitePath) -> HeaderMap {
-    let mut jar = match website_path {
-        WebsitePath::BoilerSwap => CLEARED_COOKIES_SWAP.clone(),
-        WebsitePath::Photos => {
-            panic!("Photos has no cookies")
-        }
-        WebsitePath::Home => {
-            panic!("Home has no cookies")
-        }
-    };
+pub fn generate_cookie(
+    key: &str,
+    value: &str,
+    ttl_seconds: i64,
+    website_path: WebsitePath,
+) -> HeaderMap {
+    let mut jar = get_cleared_cookies(website_path.clone());
 
-    let new_cookie = Cookie::build((key.to_owned(), value.to_owned()))
-        .path(format!("/{}", website_path.as_ref()))
-        .http_only(true)
-        .secure(true)
-        .same_site(Strict)
-        .max_age(Duration::seconds(ttl));
+    let new_cookie = build_cookie(key, value, website_path.as_ref(), ttl_seconds);
 
     jar.add(new_cookie);
 
@@ -102,4 +91,30 @@ pub fn get_cookie(headers: &HeaderMap, key: &str) -> Option<String> {
     CookieJar::from_headers(headers)
         .get(key)
         .map(|cookie| cookie.value().to_string())
+}
+
+fn build_cookie(
+    key: &str,
+    value: &str,
+    website_path: &str,
+    ttl_seconds: i64,
+) -> CookieBuilder<'static> {
+    Cookie::build((key.to_owned(), value.to_owned()))
+        .path(format!("/{}", website_path))
+        .http_only(true)
+        .secure(true)
+        .same_site(Strict)
+        .max_age(Duration::seconds(ttl_seconds))
+}
+
+fn get_cleared_cookies(website_path: WebsitePath) -> cookieCookieJar {
+    match website_path {
+        WebsitePath::BoilerSwap => CLEARED_COOKIES_SWAP.clone(),
+        WebsitePath::Photos => {
+            panic!("Photos has no cookies")
+        }
+        WebsitePath::Home => {
+            panic!("Home has no cookies")
+        }
+    }
 }
