@@ -109,10 +109,11 @@ pub async fn verify_handler(
     Json(payload): Json<Token>,
 ) -> Result<impl IntoResponse, AppError> {
     let website_path = get_website_path(&label);
+
     let verified_result = check_token(
         state.clone(),
         headers.clone(),
-        &[RedisAction::Session],
+        &[RedisAction::Forgot, RedisAction::Update, RedisAction::Auth],
         &website_path,
     )
     .await?;

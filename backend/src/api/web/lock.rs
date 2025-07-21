@@ -1,4 +1,4 @@
-use super::verify::hash_password;
+use super::{twofactor::generate_code, verify::hash_password};
 use crate::{
     AppError, AppState,
     api::{
@@ -206,7 +206,7 @@ pub async fn prepare_resend_and_check_locks(
     )
     .await?;
 
-    let redis_account: RedisAccount = serde_json::from_str(
+    let old_redis_account: RedisAccount = serde_json::from_str(
         &verified_result
             .serialized_account
             .clone()
@@ -216,7 +216,7 @@ pub async fn prepare_resend_and_check_locks(
     if are_all_locked(
         state.clone(),
         website_path,
-        &redis_account.email,
+        &old_redis_account.email,
         &[LockCheck {
             key: &get_key(RedisAction::LockedCode, hashed_ip),
             check: &state.config.authentication.max_codes,
@@ -229,7 +229,10 @@ pub async fn prepare_resend_and_check_locks(
         ));
     }
 
-    Ok(redis_account)
+    Ok(RedisAccount {
+        code: generate_code(),
+        ..old_redis_account
+    })
 }
 
 pub async fn check_auth_locks(
