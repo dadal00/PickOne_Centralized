@@ -2,21 +2,20 @@ use crate::{
     api::{
         bot::{chat::start_bot, photo::photo_handler},
         microservices::{
-            cdc::start_cdc,
+            cdc::{RedisCDCParams, ScyllaCDCParams, start_cdc},
             database::schema::{BOILER_SWAP_KEYSPACE, columns::boiler_swap::items, tables},
         },
-        models::{METRICS_ROUTE, RedisAction, WebsitePath, WebsiteRoute},
         web::{
             handlers::{
                 api_token_check, authenticate_handler, delete_handler, forgot_handler,
-                resend_handler, verify_handler,
+                resend_handler, verify_handler, visitors_handler,
             },
-            home::visitors_handler,
-            swap::post_item_handler,
+            models::{METRICS_ROUTE, RedisAction, WebsitePath, WebsiteRoute},
+            swap::handlers::post_item_handler,
         },
     },
     error::AppError,
-    metrics::metrics_handler,
+    metrics::{RedisMetricAction, metrics_handler},
     signals::shutdown_signal,
     state::AppState,
 };
@@ -150,11 +149,17 @@ async fn main() -> Result<(), AppError> {
 
     let (mut cdc_reader, cdc_future) = start_cdc(
         state.clone(),
-        BOILER_SWAP_KEYSPACE,
-        tables::boiler_swap::ITEMS,
-        items::ITEM_ID,
-        RedisAction::DeletedItem.as_ref(),
-        WebsitePath::BoilerSwap.as_ref(),
+        ScyllaCDCParams {
+            keyspace: BOILER_SWAP_KEYSPACE.to_string(),
+            table: tables::boiler_swap::ITEMS.to_string(),
+            id_name: items::ITEM_ID.to_string(),
+        },
+        WebsitePath::BoilerSwap,
+        RedisCDCParams {
+            metric: RedisMetricAction::Items.as_ref().to_string(),
+            deletion_name: RedisAction::DeletedItem.as_ref().to_string(),
+            metric_prefix: RedisAction::Metric.as_ref().to_string(),
+        },
     )
     .await?;
 

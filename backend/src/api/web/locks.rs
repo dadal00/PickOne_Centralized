@@ -1,23 +1,25 @@
-use super::{twofactor::generate_code, verify::hash_password};
+use super::{
+    models::{Account, Action, RedisAccount, RedisAction, VerifiedTokenResult, WebsitePath},
+    sessions::delete_all_sessions,
+    swap::database::{check_lock, get_user, unlock_account, update_lock},
+    twofactor::generate_code,
+    utilities::get_key,
+    verify::hash_password,
+};
 use crate::{
     AppError, AppState,
-    api::{
-        microservices::{
-            database::core::{check_lock, get_user, unlock_account, update_lock},
-            redis::{insert_id, remove_id, try_get},
-        },
-        models::{
-            Account, Action, LockCheck, RedisAccount, RedisAction, VerifiedTokenResult, WebsitePath,
-        },
-        utilities::get_key,
-        web::sessions::delete_all_sessions,
-    },
+    api::microservices::redis::{insert_id, remove_id, try_get},
 };
 use chrono::{Duration as chronoDuration, Utc};
 use once_cell::sync::Lazy;
 use redis::Script;
 use std::sync::Arc;
 use tokio::task::spawn_blocking;
+
+pub struct LockCheck<'a> {
+    pub key: &'a str,
+    pub check: &'a u8,
+}
 
 static FAILED_ATTEMPTS_SCRIPT: Lazy<Script> = Lazy::new(|| {
     Script::new(
@@ -34,18 +36,22 @@ static FAILED_ATTEMPTS_SCRIPT: Lazy<Script> = Lazy::new(|| {
     )
 });
 
-pub async fn check_db_lock(state: Arc<AppState>, email: &str) -> Result<bool, AppError> {
-    let locked = check_lock(state.clone(), email).await?;
-
-    Ok(locked.unwrap_or(false))
+pub async fn check_db_lock(
+    state: Arc<AppState>,
+    email: &str,
+    website_path: &WebsitePath,
+) -> Result<bool, AppError> {
+    Ok(check_lock(state.clone(), email, website_path)
+        .await?
+        .unwrap_or(false))
 }
 
 pub async fn freeze_account(
     state: Arc<AppState>,
     email: &str,
-    website_path: WebsitePath,
+    website_path: &WebsitePath,
 ) -> Result<(), AppError> {
-    if check_db_lock(state.clone(), email).await? {
+    if check_db_lock(state.clone(), email, website_path).await? {
         return Ok(());
     }
 
@@ -59,7 +65,7 @@ pub async fn freeze_account(
     )
     .await?;
 
-    update_lock(state.clone(), email, true).await?;
+    update_lock(state.clone(), email, true, website_path).await?;
 
     delete_all_sessions(
         state.clone(),
@@ -77,6 +83,7 @@ pub async fn unfreeze_account(
     state: Arc<AppState>,
     email: &str,
     password: &str,
+    website_path: &WebsitePath,
 ) -> Result<(), AppError> {
     unlock_account(
         state.clone(),
@@ -86,6 +93,7 @@ pub async fn unfreeze_account(
             move || hash_password(&password_owned)
         })
         .await?,
+        website_path,
     )
     .await?;
 
@@ -96,9 +104,9 @@ pub async fn check_locks(
     state: Arc<AppState>,
     email: &str,
     issued_timestamp: i64,
-    website_path: &str,
+    website_path: &WebsitePath,
 ) -> Result<bool, AppError> {
-    if check_db_lock(state.clone(), email).await? {
+    if check_db_lock(state.clone(), email, website_path).await? {
         return Ok(true);
     }
 
@@ -106,7 +114,7 @@ pub async fn check_locks(
         state.clone(),
         &format!(
             "{}:{}:{}",
-            website_path,
+            website_path.as_ref(),
             RedisAction::LockedTime.as_ref(),
             email
         ),
@@ -145,17 +153,17 @@ pub async fn check_forgot_lock(
     state: Arc<AppState>,
     email: &str,
     forgot_key: &Option<String>,
-    website_path: &str,
+    website_path: &WebsitePath,
 ) -> bool {
     if let Some(key) = forgot_key {
-        match get_user(state.clone(), email).await {
+        match get_user(state.clone(), email, website_path).await {
             Ok(Some(_)) => (),
             _ => return true,
         }
 
         if let Ok(is_locked) = is_redis_locked(
             state.clone(),
-            website_path,
+            website_path.as_ref(),
             key,
             email,
             &state.config.authentication.verify_max_attempts,

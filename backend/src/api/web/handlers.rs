@@ -1,13 +1,15 @@
 use super::{
     cookies::{clear_cookies, remove_cookie},
-    lock::{
-        check_auth_locks, check_forgot_locks, freeze_account, prepare_resend_and_check_locks,
-        unfreeze_account,
+    locks::{
+        check_auth_locks, check_forgot_locks, freeze_account, is_home_locked,
+        prepare_resend_and_check_locks, unfreeze_account,
     },
+    models::{Account, METRICS_ROUTE, PHOTOS_PREFIX, RedisAction, Token, WebsitePath},
     sessions::{
         create_forgot_redis_account, create_session, create_temporary_session,
         try_create_redis_account, try_get_redis_account,
     },
+    utilities::{get_hashed_ip, get_key, get_website_path},
     verify::{
         check_account, check_email, check_resend, check_token, check_token_content,
         is_request_authorized,
@@ -15,11 +17,7 @@ use super::{
 };
 use crate::{
     AppError, AppState,
-    api::{
-        models::{Account, METRICS_ROUTE, PHOTOS_PREFIX, RedisAction, Token, WebsitePath},
-        utilities::{get_hashed_ip, get_key, get_website_path},
-    },
-    metrics::incr_visitors,
+    metrics::{get_visitors_payload, incr_visitors},
 };
 use axum::{
     Extension, Json,
@@ -29,6 +27,7 @@ use axum::{
     response::IntoResponse,
 };
 use std::{net::SocketAddr, sync::Arc};
+use tracing::info;
 
 pub async fn api_token_check(
     headers: HeaderMap,
@@ -124,13 +123,13 @@ pub async fn verify_handler(
         &verified_result,
         &payload.token,
         &get_hashed_ip(&headers, address.ip()),
-        website_path.as_ref(),
+        &website_path,
     )
     .await?;
 
     match verified_result.redis_action {
         RedisAction::Forgot => {
-            freeze_account(state.clone(), &redis_account.email, website_path.clone()).await?;
+            freeze_account(state.clone(), &redis_account.email, &website_path).await?;
 
             return Ok((
                 StatusCode::OK,
@@ -148,14 +147,20 @@ pub async fn verify_handler(
                 .into_response());
         }
         RedisAction::Update => {
-            unfreeze_account(state.clone(), &redis_account.email, &payload.token).await?;
+            unfreeze_account(
+                state.clone(),
+                &redis_account.email,
+                &payload.token,
+                &website_path,
+            )
+            .await?;
         }
         _ => {}
     }
 
     Ok((
         StatusCode::OK,
-        create_session(state.clone(), &redis_account, website_path).await?,
+        create_session(state.clone(), &redis_account, &website_path).await?,
     )
         .into_response())
 }
@@ -169,13 +174,15 @@ pub async fn authenticate_handler(
 ) -> Result<impl IntoResponse, AppError> {
     let website_path = get_website_path(&label);
     let hashed_ip = get_hashed_ip(&headers, address.ip());
-
+    info!("1");
     check_auth_locks(state.clone(), &hashed_ip, website_path.as_ref(), &payload).await?;
+    info!("2");
     check_account(&payload)?;
+    info!("3");
 
     let redis_account =
-        try_create_redis_account(state.clone(), &hashed_ip, website_path.as_ref(), &payload)
-            .await?;
+        try_create_redis_account(state.clone(), &hashed_ip, &website_path, &payload).await?;
+    info!("4");
 
     Ok((
         StatusCode::OK,
@@ -235,4 +242,14 @@ pub async fn resend_handler(
         .await?,
     )
         .into_response())
+}
+
+pub async fn visitors_handler(
+    headers: HeaderMap,
+    ConnectInfo(address): ConnectInfo<SocketAddr>,
+    State(state): State<Arc<AppState>>,
+) -> Result<impl IntoResponse, AppError> {
+    is_home_locked(state.clone(), &get_hashed_ip(&headers, address.ip())).await?;
+
+    Ok((StatusCode::OK, get_visitors_payload(state.clone()).await?).into_response())
 }

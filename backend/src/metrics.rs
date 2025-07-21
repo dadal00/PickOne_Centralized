@@ -2,7 +2,7 @@ use crate::{
     AppError, AppState,
     api::{
         microservices::redis::try_get,
-        models::{RedisAction, RedisMetricAction, VisitorPayload, WebsitePath},
+        web::models::{RedisAction, VisitorPayload, WebsitePath},
     },
 };
 use axum::{Json, extract::State};
@@ -10,6 +10,16 @@ use once_cell::sync::Lazy;
 use prometheus::{Encoder, IntCounter, IntGauge, Registry, TextEncoder};
 use redis::{AsyncTypedCommands, Script, aio::ConnectionManager};
 use std::sync::Arc;
+use strum_macros::{AsRefStr, EnumString};
+
+#[derive(EnumString, AsRefStr, PartialEq)]
+pub enum RedisMetricAction {
+    #[strum(serialize = "visitors")]
+    Visitors,
+
+    #[strum(serialize = "items")]
+    Items,
+}
 
 static DECR_METRIC_SCRIPT: Lazy<Script> = Lazy::new(|| {
     Script::new(

@@ -1,10 +1,11 @@
-use super::{cookies::get_cookie, twofactor::CODE_REGEX};
+use super::{
+    cookies::get_cookie,
+    models::{Account, DummyClaims, VerifiedTokenResult},
+    twofactor::CODE_REGEX,
+    utilities::{check_path, format_verified_result},
+};
 use crate::{
     AppError, AppState, RedisAction, WebsitePath,
-    api::{
-        models::{Account, DummyClaims, VerifiedTokenResult},
-        utilities::{check_path, format_verified_result},
-    },
     config::{read_secret, try_load},
 };
 use argon2::{

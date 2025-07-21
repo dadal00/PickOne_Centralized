@@ -1,5 +1,5 @@
-use super::lock::{check_forgot_lock, increment_lock_key};
-use crate::{AppError, AppState};
+use super::locks::{check_forgot_lock, increment_lock_key};
+use crate::{AppError, AppState, WebsitePath};
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     transport::smtp::authentication::Credentials,
@@ -49,7 +49,7 @@ pub fn spawn_code_task(
     email: String,
     token: String,
     forgot_key: Option<String>,
-    website_path: String,
+    website_path: WebsitePath,
 ) {
     tokio::spawn(async move {
         if check_forgot_lock(state.clone(), &email, &forgot_key, &website_path).await {
@@ -69,7 +69,7 @@ pub fn spawn_code_task(
         if forgot_key.is_some()
             && (increment_lock_key(
                 state.clone(),
-                &website_path,
+                website_path.as_ref(),
                 &forgot_key.expect("is_some failed"),
                 &email,
                 &state.config.authentication.verify_lock_duration_seconds,

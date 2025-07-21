@@ -1,21 +1,15 @@
 use super::{
     cookies::generate_cookie,
-    lock::check_locks,
-    twofactor::generate_code,
-    twofactor::spawn_code_task,
+    locks::{check_locks, increment_lock_key, is_redis_locked, is_temporarily_locked},
+    models::{Account, Action, RedisAccount, RedisAction, VerifiedTokenResult, WebsitePath},
+    swap::database::{get_user, insert_user},
+    twofactor::{generate_code, spawn_code_task},
+    utilities::{clear_all_keys, get_key},
     verify::{hash_password, verify_password},
 };
 use crate::{
     AppError, AppState,
-    api::{
-        microservices::{
-            database::core::{get_user, insert_user},
-            redis::{clear_all_keys, insert_id, remove_id},
-        },
-        models::{Account, Action, RedisAccount, RedisAction, VerifiedTokenResult, WebsitePath},
-        utilities::get_key,
-        web::lock::{increment_lock_key, is_redis_locked, is_temporarily_locked},
-    },
+    api::microservices::redis::{insert_id, remove_id},
 };
 use axum::http::header::HeaderMap;
 use chrono::Utc;
@@ -55,7 +49,7 @@ pub async fn create_temporary_session(
         redis_account,
         forgot_key,
         code_key,
-        website_path.as_ref(),
+        website_path,
     )
     .await?;
 
@@ -91,7 +85,7 @@ pub async fn create_temporary_session(
             .session
             .temporary_session_duration_seconds
             .into(),
-        website_path.clone(),
+        website_path,
     ))
 }
 
@@ -101,7 +95,7 @@ async fn send_code(
     redis_account: &RedisAccount,
     forgot_key: &Option<String>,
     code_key: &Option<String>,
-    website_path: &str,
+    website_path: &WebsitePath,
 ) -> Result<(), AppError> {
     if *redis_action == RedisAction::Update {
         return Ok(());
@@ -112,12 +106,12 @@ async fn send_code(
         redis_account.email.clone(),
         redis_account.code.clone(),
         forgot_key.clone(),
-        website_path.to_string(),
+        website_path.clone(),
     );
 
     increment_lock_key(
         state.clone(),
-        website_path,
+        website_path.as_ref(),
         code_key.as_ref().unwrap(),
         &redis_account.email,
         &state.config.authentication.max_codes_duration_seconds,
@@ -131,10 +125,10 @@ async fn send_code(
 pub async fn create_session(
     state: Arc<AppState>,
     redis_account: &RedisAccount,
-    website_path: WebsitePath,
+    website_path: &WebsitePath,
 ) -> Result<HeaderMap, AppError> {
     if redis_account.action == Action::Signup {
-        insert_user(state.clone(), redis_account).await?;
+        insert_user(state.clone(), redis_account, website_path).await?;
     }
 
     let session_id = Uuid::new_v4().to_string();
@@ -160,7 +154,7 @@ pub async fn create_session(
 pub async fn try_create_redis_account(
     state: Arc<AppState>,
     hashed_ip: &str,
-    website_path: &str,
+    website_path: &WebsitePath,
     payload: &Account,
 ) -> Result<RedisAccount, AppError> {
     let lock_key = get_key(RedisAction::LockedAuth, hashed_ip);
@@ -178,7 +172,7 @@ pub async fn try_create_redis_account(
 
     remove_id(
         state.clone(),
-        &format!("{}:{}:{}", website_path, &lock_key, &payload.email),
+        &format!("{}:{}:{}", website_path.as_ref(), &lock_key, &payload.email),
     )
     .await?;
 
@@ -191,7 +185,7 @@ pub async fn get_redis_account(
     code: &str,
     redis_action_secondary: RedisAction,
     failed_verify_key: &str,
-    website_path: &str,
+    website_path: &WebsitePath,
 ) -> Result<Option<RedisAccount>, AppError> {
     let serialized = match &verified_result.serialized_account {
         Some(s) => s,
@@ -200,7 +194,7 @@ pub async fn get_redis_account(
 
     if is_temporarily_locked(
         state.clone(),
-        website_path,
+        website_path.as_ref(),
         redis_action_secondary.as_ref(),
         &verified_result.id,
         1,
@@ -214,7 +208,7 @@ pub async fn get_redis_account(
 
     if is_redis_locked(
         state.clone(),
-        website_path,
+        website_path.as_ref(),
         failed_verify_key,
         &deserialized.email,
         &state.config.authentication.verify_max_attempts,
@@ -240,7 +234,7 @@ pub async fn get_redis_account(
     if !locked && verified_result.redis_action != RedisAction::Update && code != deserialized.code {
         increment_lock_key(
             state.clone(),
-            website_path,
+            website_path.as_ref(),
             failed_verify_key,
             &deserialized.email,
             &state.config.authentication.verify_lock_duration_seconds,
@@ -255,7 +249,7 @@ pub async fn get_redis_account(
         state.clone(),
         &format!(
             "{}:{}:{}",
-            website_path,
+            website_path.as_ref(),
             verified_result.redis_action.as_ref(),
             &verified_result.id
         ),
@@ -275,9 +269,9 @@ pub async fn create_redis_account(
     email: &str,
     password: &str,
     failed_auth_key: &str,
-    website_path: &str,
+    website_path: &WebsitePath,
 ) -> Result<Option<RedisAccount>, AppError> {
-    match get_user(state.clone(), email).await? {
+    match get_user(state.clone(), email, website_path).await? {
         None => {
             if action == Action::Login {
                 return Ok(None);
@@ -307,7 +301,7 @@ pub async fn create_redis_account(
             {
                 increment_lock_key(
                     state.clone(),
-                    website_path,
+                    website_path.as_ref(),
                     failed_auth_key,
                     email,
                     &state.config.authentication.auth_lock_duration_seconds,
@@ -332,7 +326,7 @@ pub async fn try_get_redis_account(
     verified_result: &VerifiedTokenResult,
     token: &str,
     hashed_ip: &str,
-    website_path: &str,
+    website_path: &WebsitePath,
 ) -> Result<RedisAccount, AppError> {
     match get_redis_account(
         state.clone(),
@@ -347,7 +341,7 @@ pub async fn try_get_redis_account(
         Some(account) => {
             clear_all_keys(
                 state.clone(),
-                website_path,
+                website_path.as_ref(),
                 &[
                     &get_key(RedisAction::LockedCode, hashed_ip),
                     &get_key(RedisAction::LockedForgot, hashed_ip),

@@ -4,9 +4,10 @@ use super::database::{
 };
 use crate::{
     AppError,
-    api::{models::ItemRow, web::swap::convert_db_items},
+    api::{web::swap::database::convert_db_items, web::swap::models::ItemRow},
     config::{read_secret, try_load},
 };
+use anyhow::Result as anyResult;
 use meilisearch_sdk::{
     client::*,
     settings::{MinWordSizeForTypos, Settings, TypoToleranceSettings},
@@ -116,7 +117,7 @@ pub async fn add_items<T>(
     index_name: &str,
     items: &[T],
     id_name: &str,
-) -> anyhow::Result<()>
+) -> anyResult<()>
 where
     T: Serialize + Send + Sync,
 {
@@ -130,11 +131,7 @@ where
     Ok(())
 }
 
-pub async fn delete_item(
-    meili_client: Arc<Client>,
-    index_name: &str,
-    key: Uuid,
-) -> anyhow::Result<()> {
+pub async fn delete_item(meili_client: Arc<Client>, index_name: &str, key: Uuid) -> anyResult<()> {
     meili_client
         .index(index_name)
         .delete_document(key)
@@ -145,7 +142,7 @@ pub async fn delete_item(
     Ok(())
 }
 
-pub async fn clear_index(meili_client: Arc<Client>, index_name: &str) -> anyhow::Result<()> {
+pub async fn clear_index(meili_client: Arc<Client>, index_name: &str) -> anyResult<()> {
     meili_client
         .index(index_name)
         .delete_all_documents()

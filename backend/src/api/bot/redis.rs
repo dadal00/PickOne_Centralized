@@ -1,7 +1,6 @@
 use crate::{AppError, AppState};
 use once_cell::sync::Lazy;
-use redis::Script;
-use redis::{AsyncTypedCommands, cmd};
+use redis::{AsyncTypedCommands, Script, cmd};
 use std::sync::Arc;
 
 static INSERT_USER_PHOTO_BYTES_SCRIPT: Lazy<Script> = Lazy::new(|| {

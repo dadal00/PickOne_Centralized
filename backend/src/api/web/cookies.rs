@@ -1,11 +1,8 @@
-use crate::{
-    AppError, AppState,
-    api::{
-        microservices::redis::remove_id,
-        models::{RedisAction, WebsitePath},
-        utilities::get_website_path,
-    },
+use super::{
+    models::{RedisAction, WebsitePath},
+    utilities::get_website_path,
 };
+use crate::{AppError, AppState, api::microservices::redis::remove_id};
 use axum::http::{
     HeaderValue,
     header::{HeaderMap, SET_COOKIE},
@@ -42,7 +39,7 @@ pub fn cleared_cookies_for(website_path: WebsitePath) -> cookieCookieJar {
 }
 
 pub fn clear_cookies(label: &str) -> HeaderMap {
-    generate_cookie("", "", 0, get_website_path(label))
+    generate_cookie("", "", 0, &get_website_path(label))
 }
 
 pub async fn remove_cookie(
@@ -67,9 +64,9 @@ pub fn generate_cookie(
     key: &str,
     value: &str,
     ttl_seconds: i64,
-    website_path: WebsitePath,
+    website_path: &WebsitePath,
 ) -> HeaderMap {
-    let mut jar = get_cleared_cookies(website_path.clone());
+    let mut jar = get_cleared_cookies(website_path);
 
     let new_cookie = build_cookie(key, value, website_path.as_ref(), ttl_seconds);
 
@@ -107,7 +104,7 @@ fn build_cookie(
         .max_age(Duration::seconds(ttl_seconds))
 }
 
-fn get_cleared_cookies(website_path: WebsitePath) -> cookieCookieJar {
+fn get_cleared_cookies(website_path: &WebsitePath) -> cookieCookieJar {
     match website_path {
         WebsitePath::BoilerSwap => CLEARED_COOKIES_SWAP.clone(),
         WebsitePath::Photos => {

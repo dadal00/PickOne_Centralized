@@ -43,22 +43,3 @@ pub async fn remove_id(state: Arc<AppState>, key: &str) -> Result<(), AppError> 
 pub async fn try_get(state: Arc<AppState>, key: &str) -> Result<Option<String>, AppError> {
     Ok(state.redis_connection_manager.clone().get(key).await?)
 }
-
-pub async fn clear_all_keys(
-    state: Arc<AppState>,
-    website_path: &str,
-    keys: &[&str],
-    email: &str,
-) -> Result<(), AppError> {
-    let mut pipe = redis::pipe();
-
-    for key in keys {
-        pipe.del(format!("{}:{}:{}", website_path, key, email))
-            .ignore();
-    }
-
-    pipe.query_async::<()>(&mut state.redis_connection_manager.clone())
-        .await?;
-
-    Ok(())
-}
