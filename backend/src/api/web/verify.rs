@@ -1,14 +1,8 @@
-use super::{
-    cookies::get_cookie,
-    twofactor::{CODE_REGEX, generate_code},
-};
+use super::{cookies::get_cookie, twofactor::CODE_REGEX};
 use crate::{
-    AppError, AppState,
+    AppError, AppState, RedisAction, WebsitePath,
     api::{
-        models::{
-            Account, Action, DummyClaims, RedisAccount, RedisAction, VerifiedTokenResult,
-            WebsitePath,
-        },
+        models::{Account, DummyClaims, VerifiedTokenResult},
         utilities::{check_path, format_verified_result},
     },
     config::{read_secret, try_load},
@@ -203,16 +197,6 @@ pub async fn is_request_authorized(
 
 pub fn check_email(token: &str) -> Result<(), AppError> {
     validate_email(token).map_err(|e| AppError::BadRequest(e.to_string()))
-}
-
-pub fn create_forgot_redis_account(token: String) -> RedisAccount {
-    RedisAccount {
-        email: token,
-        action: Action::Forgot,
-        code: generate_code().clone(),
-        issued_timestamp: None,
-        password_hash: None,
-    }
 }
 
 pub fn check_account(payload: &Account) -> Result<(), AppError> {

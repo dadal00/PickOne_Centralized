@@ -253,29 +253,27 @@ pub async fn create_redis_account(
                 return Ok(None);
             }
 
-            let password_owned = password.to_owned();
+            let password_hash = spawn_blocking({
+                let password_owned = password.to_owned();
+                move || hash_password(&password_owned)
+            })
+            .await?;
 
-            let password_hash = spawn_blocking(move || hash_password(&password_owned)).await?;
-
-            Ok(Some(RedisAccount {
-                email: email.to_string(),
-                action: action.clone(),
-                code: generate_code().clone(),
-                issued_timestamp: Some(Utc::now().timestamp_millis()),
-                password_hash: Some(password_hash),
-            }))
+            Ok(Some(create_auth_redis_account(
+                email.to_string(),
+                action.clone(),
+                Some(password_hash),
+            )))
         }
-        Some((hash, locked)) => {
-            let plaintext = password.to_owned();
-
-            let hash = hash.to_owned();
-
-            if action == Action::Signup || locked {
-                return Ok(None);
-            }
-
+        Some((_, locked)) if action == Action::Signup || locked => Ok(None),
+        Some((hash, _)) => {
             if action == Action::Login
-                && !spawn_blocking(move || verify_password(&plaintext, &hash)).await?
+                && !spawn_blocking({
+                    let plaintext = password.to_owned();
+                    let hash = hash.to_owned();
+                    move || verify_password(&plaintext, &hash)
+                })
+                .await?
             {
                 increment_lock_key(
                     state.clone(),
@@ -286,16 +284,15 @@ pub async fn create_redis_account(
                     &state.config.authentication.auth_max_attempts,
                 )
                 .await?;
+
                 return Ok(None);
             }
 
-            Ok(Some(RedisAccount {
-                email: email.to_string(),
-                action: action.clone(),
-                code: generate_code().clone(),
-                issued_timestamp: Some(Utc::now().timestamp_millis()),
-                password_hash: None,
-            }))
+            Ok(Some(create_auth_redis_account(
+                email.to_string(),
+                action.clone(),
+                None,
+            )))
         }
     }
 }
@@ -334,5 +331,29 @@ pub async fn try_get_redis_account(
             Ok(account)
         }
         None => Err(AppError::Unauthorized("Unable to verify".to_string())),
+    }
+}
+
+pub fn create_forgot_redis_account(email: String) -> RedisAccount {
+    RedisAccount {
+        email,
+        action: Action::Forgot,
+        code: generate_code().clone(),
+        issued_timestamp: None,
+        password_hash: None,
+    }
+}
+
+pub fn create_auth_redis_account(
+    email: String,
+    action: Action,
+    password_hash: Option<String>,
+) -> RedisAccount {
+    RedisAccount {
+        email,
+        action,
+        code: generate_code().clone(),
+        issued_timestamp: Some(Utc::now().timestamp_millis()),
+        password_hash,
     }
 }

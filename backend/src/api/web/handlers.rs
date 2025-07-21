@@ -5,11 +5,12 @@ use super::{
         unfreeze_account,
     },
     sessions::{
-        create_session, create_temporary_session, try_create_redis_account, try_get_redis_account,
+        create_forgot_redis_account, create_session, create_temporary_session,
+        try_create_redis_account, try_get_redis_account,
     },
     verify::{
         check_account, check_email, check_resend, check_token, check_token_content,
-        create_forgot_redis_account, is_request_authorized,
+        is_request_authorized,
     },
 };
 use crate::{

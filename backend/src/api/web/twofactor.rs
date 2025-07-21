@@ -62,7 +62,7 @@ pub fn spawn_code_task(
                 AppError::LettreTransport(msg) => debug!("Transport error: {}", msg),
                 other => warn!("Unexpected error: {:?}", other),
             }
-            
+
             return;
         }
 
