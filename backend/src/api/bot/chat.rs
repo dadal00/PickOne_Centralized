@@ -1,9 +1,9 @@
 use super::{
-    models::{ChatMessage, Command, HandlerResult, RedisBotAction},
-    photo::{download_photo, generate_qr_bytes, process_photos},
-    redis::get_num_photos,
+    models::{ChatMessage, Command, HandlerResult},
+    photo::generate_qr_bytes,
+    utilities::{download_user_photo, user_clear, user_get_link, user_num_photos},
 };
-use crate::{AppError, AppState, api::microservices::redis::remove_id, config::read_secret};
+use crate::{AppError, AppState, config::read_secret};
 use dptree::case;
 use std::{error::Error as stdErr, sync::Arc};
 use teloxide::{
@@ -45,26 +45,13 @@ async fn clear(bot: Bot, msg: Message, state: Arc<AppState>) -> HandlerResult {
     bot.send_message(msg.chat.id, ChatMessage::Cleared.as_ref())
         .await?;
 
-    remove_id(
-        state.clone(),
-        &format!(
-            "{}:{}",
-            RedisBotAction::User.as_ref(),
-            &msg.from.unwrap().id.to_string()
-        ),
-    )
-    .await?;
+    user_clear(state, &msg).await?;
 
     Ok(())
 }
 
 async fn process(bot: Bot, msg: Message, state: Arc<AppState>) -> HandlerResult {
-    let num_photos = get_num_photos(
-        state.clone(),
-        RedisBotAction::User.as_ref(),
-        &msg.from.clone().unwrap().id.to_string(),
-    )
-    .await?;
+    let num_photos = user_num_photos(state.clone(), &msg).await?;
 
     if num_photos < state.config.bot.num_pictures {
         bot.send_message(
@@ -79,16 +66,7 @@ async fn process(bot: Bot, msg: Message, state: Arc<AppState>) -> HandlerResult 
     bot.send_message(msg.chat.id, ChatMessage::Processing.as_ref())
         .await?;
 
-    let link = format!(
-        "{}/{}",
-        state.config.bot.photo_url,
-        process_photos(
-            state.clone(),
-            RedisBotAction::User,
-            &msg.from.unwrap().id.to_string()
-        )
-        .await?
-    );
+    let link = user_get_link(state, &msg).await?;
 
     bot.send_photo(msg.chat.id, InputFile::memory(generate_qr_bytes(&link)?))
         .caption(format!("{}\n\n{}", ChatMessage::Processed.as_ref(), &link))
@@ -99,16 +77,14 @@ async fn process(bot: Bot, msg: Message, state: Arc<AppState>) -> HandlerResult 
 }
 
 async fn listen(bot: Bot, msg: Message, state: Arc<AppState>) -> HandlerResult {
-    let photos = msg.photo();
-
-    if photos.is_none() {
+    if msg.photo().is_none() {
         bot.send_message(msg.chat.id, Command::descriptions().to_string())
             .await?;
 
         return Ok(());
     }
 
-    let file: &FileMeta = &photos.expect("is_none failed").last().unwrap().file;
+    let file: &FileMeta = &msg.photo().expect("is_none failed").last().unwrap().file;
 
     if file.size > state.config.bot.max_bytes {
         bot.send_message(msg.chat.id, ChatMessage::ImageTooLarge.as_ref())
@@ -117,20 +93,13 @@ async fn listen(bot: Bot, msg: Message, state: Arc<AppState>) -> HandlerResult {
         return Ok(());
     }
 
-    let msg_clone = msg.clone();
-
-    let length = download_photo(
-        &bot,
-        state.clone(),
-        RedisBotAction::User,
-        &msg_clone.from.unwrap().id.to_string(),
-        file.id.clone(),
-    )
-    .await?;
-
     bot.send_message(
         msg.chat.id,
-        format!("{}{}", length, ChatMessage::Received.as_ref()),
+        format!(
+            "{}{}",
+            download_user_photo(&bot, state, &msg, file).await?,
+            ChatMessage::Received.as_ref()
+        ),
     )
     .await?;
 

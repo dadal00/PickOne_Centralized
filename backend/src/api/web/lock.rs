@@ -4,20 +4,35 @@ use crate::{
     api::{
         microservices::{
             database::core::{check_lock, get_user, unlock_account, update_lock},
-            redis::{
-                delete_all_sessions, increment_lock_key, insert_id, is_redis_locked,
-                is_temporarily_locked_ms, remove_id, try_get,
-            },
+            redis::{insert_id, remove_id, try_get},
         },
         models::{
             Account, Action, LockCheck, RedisAccount, RedisAction, VerifiedTokenResult, WebsitePath,
         },
         utilities::get_key,
+        web::sessions::delete_all_sessions,
     },
 };
 use chrono::{Duration as chronoDuration, Utc};
+use once_cell::sync::Lazy;
+use redis::Script;
 use std::sync::Arc;
 use tokio::task::spawn_blocking;
+
+static FAILED_ATTEMPTS_SCRIPT: Lazy<Script> = Lazy::new(|| {
+    Script::new(
+        r#"
+        local attempts = redis.call("INCR", KEYS[1])
+        if attempts <= tonumber(ARGV[2]) then
+            if tonumber(ARGV[1]) > 0 then
+                redis.call("EXPIRE", KEYS[1], tonumber(ARGV[1]))
+            end
+        else
+            redis.call("DECR", KEYS[1])
+        end
+    "#,
+    )
+});
 
 pub async fn check_db_lock(state: Arc<AppState>, email: &str) -> Result<bool, AppError> {
     let locked = check_lock(state.clone(), email).await?;
@@ -294,4 +309,78 @@ pub async fn is_home_locked(state: Arc<AppState>, hashed_ip: &str) -> Result<(),
     }
 
     Ok(())
+}
+
+pub async fn increment_lock_key(
+    state: Arc<AppState>,
+    website_path: &str,
+    key: &str,
+    email: &str,
+    locked_duration_seconds: &u16,
+    max_attempts: &u8,
+) -> Result<(), AppError> {
+    let _count: () = FAILED_ATTEMPTS_SCRIPT
+        .key(format!("{}:{}:{}", website_path, key, email))
+        .arg(locked_duration_seconds)
+        .arg(max_attempts)
+        .invoke_async(&mut state.redis_connection_manager.clone())
+        .await?;
+
+    Ok(())
+}
+
+pub async fn is_redis_locked(
+    state: Arc<AppState>,
+    website_path: &str,
+    key_prefix: &str,
+    key_id: &str,
+    threshold: &u8,
+) -> Result<bool, AppError> {
+    match try_get(
+        state,
+        &format!("{}:{}:{}", website_path, key_prefix, key_id),
+    )
+    .await?
+    {
+        Some(attempts) => Ok(attempts.parse::<u8>()? >= *threshold),
+        None => Ok(false),
+    }
+}
+
+pub async fn is_temporarily_locked_ms(
+    state: Arc<AppState>,
+    website_path: &str,
+    key: &str,
+    id: &str,
+    ttl_ms: i64,
+) -> Result<bool, AppError> {
+    let result: Option<String> = redis::cmd("SET")
+        .arg(format!("{}:{}:{}", website_path, key, id))
+        .arg("1")
+        .arg("NX")
+        .arg("PX")
+        .arg(ttl_ms)
+        .query_async(&mut state.redis_connection_manager.clone())
+        .await?;
+
+    Ok(result.is_none())
+}
+
+pub async fn is_temporarily_locked(
+    state: Arc<AppState>,
+    website_path: &str,
+    key: &str,
+    id: &str,
+    ttl: i64,
+) -> Result<bool, AppError> {
+    let result: Option<String> = redis::cmd("SET")
+        .arg(format!("{}:{}:{}", website_path, key, id))
+        .arg("1")
+        .arg("NX")
+        .arg("EX")
+        .arg(ttl)
+        .query_async(&mut state.redis_connection_manager.clone())
+        .await?;
+
+    Ok(result.is_none())
 }

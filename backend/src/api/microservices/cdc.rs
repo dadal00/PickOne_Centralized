@@ -1,7 +1,7 @@
 use super::{
     database::init::DatabaseQueries,
     meilisearch::{add_items, delete_item},
-    redis::{decr_metric, decrement_items, incr_metric, remove_id, try_get},
+    redis::{remove_id, try_get},
 };
 use crate::{
     AppError, AppState,
@@ -11,8 +11,11 @@ use crate::{
             RedisMetricAction,
         },
         utilities::convert_i8_to_u8,
+        web::swap::decrement_items,
     },
-    items, tables,
+    items,
+    metrics::{decr_metric, incr_metric},
+    tables,
 };
 use anyhow::Error as anyhowError;
 use async_trait::async_trait;
@@ -195,7 +198,7 @@ pub async fn start_cdc(
         TableBackedCheckpointSaver::new_with_default_ttl(
             state.database_session.clone(),
             scylla_keyspace,
-            tables::CDC,
+            tables::boiler_swap::CDC,
         )
         .await
         .unwrap(),
@@ -315,9 +318,7 @@ pub async fn spawn_ttl_task(
         .await?;
 
     tokio::spawn(async move {
-        if scheduler.start().await.is_err() {
-            warn!("Scheduler failed!");
-        }
+        scheduler.start().await.expect("Failed to start scheduler");
     });
 
     Ok(())
@@ -344,7 +345,11 @@ pub async fn expire_ttl(
 
     loop {
         let (query_result, paging_state_response) = database_session
-            .execute_single_page(&database_queries.get_cron_items, &[], paging_state)
+            .execute_single_page(
+                &database_queries.boiler_swap.get_cron_items,
+                &[],
+                paging_state,
+            )
             .await?;
 
         let row_result = query_result.into_rows_result()?;
@@ -357,7 +362,7 @@ pub async fn expire_ttl(
 
         for item in items {
             if item.expiration_date < Utc::now().date_naive() {
-                batch.append_statement(database_queries.delete_item.clone());
+                batch.append_statement(database_queries.boiler_swap.delete_item.clone());
 
                 batch_values.push((item.item_id,));
             }

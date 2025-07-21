@@ -6,12 +6,24 @@ use crate::{
     },
 };
 use axum::{Json, extract::State};
+use once_cell::sync::Lazy;
 use prometheus::{Encoder, IntCounter, IntGauge, Registry, TextEncoder};
+use redis::{AsyncTypedCommands, Script, aio::ConnectionManager};
 use std::sync::Arc;
+
+static DECR_METRIC_SCRIPT: Lazy<Script> = Lazy::new(|| {
+    Script::new(
+        r#"
+        local attempts = redis.call("DECR", KEYS[1])
+        if attempts < 0 then
+            redis.call("SET", KEYS[1], 0)
+        end
+    "#,
+    )
+});
 
 pub async fn metrics_handler(State(state): State<Arc<AppState>>) -> Result<String, AppError> {
     let registry = Registry::new();
-
     let encoder = TextEncoder::new();
 
     let swap_visitors = IntCounter::new("swap_visitors", "Total visitors on BoilerSwap").unwrap();
@@ -102,6 +114,7 @@ async fn pull_metric(
     counter: &IntCounter,
 ) -> Result<(), AppError> {
     counter.inc_by(get_metric(state.clone(), website_path, metric_action).await?);
+
     Ok(())
 }
 
@@ -117,6 +130,7 @@ async fn set_metric(
             .try_into()
             .unwrap(),
     );
+
     Ok(())
 }
 
@@ -137,4 +151,47 @@ async fn get_metric(
     .await?
     .and_then(|s| s.parse::<u64>().ok())
     .unwrap_or(0))
+}
+
+pub async fn incr_metric(state: Arc<AppState>, key: &str) -> Result<(), AppError> {
+    state.redis_connection_manager.clone().incr(key, 1).await?;
+
+    Ok(())
+}
+
+pub async fn incr_visitors(
+    state: Arc<AppState>,
+    website_path: WebsitePath,
+) -> Result<(), AppError> {
+    incr_metric(
+        state.clone(),
+        &format!(
+            "{}:{}:{}",
+            website_path.as_ref(),
+            RedisAction::Metric.as_ref(),
+            RedisMetricAction::Visitors.as_ref()
+        ),
+    )
+    .await?;
+
+    Ok(())
+}
+
+pub async fn decr_metric(state: Arc<AppState>, key: &str) -> Result<(), AppError> {
+    let _: () = DECR_METRIC_SCRIPT
+        .key(key)
+        .invoke_async(&mut state.redis_connection_manager.clone())
+        .await?;
+
+    Ok(())
+}
+
+pub async fn set_redis_metric(
+    mut redis_connection_manager: ConnectionManager,
+    key: &str,
+    val: &usize,
+) -> Result<(), AppError> {
+    redis_connection_manager.set(key, val).await?;
+
+    Ok(())
 }

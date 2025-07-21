@@ -5,11 +5,12 @@ use crate::{
             cdc::{expire_ttl, spawn_ttl_task},
             database::init::{DatabaseQueries, init_database},
             meilisearch::init_meilisearch,
-            redis::{init_redis, set_metric},
+            redis::init_redis,
         },
         models::{RedisAction, RedisMetricAction, WebsitePath},
     },
     config::Config,
+    metrics::set_redis_metric,
 };
 use meilisearch_sdk::client::Client;
 use redis::aio::ConnectionManager;
@@ -28,9 +29,11 @@ pub struct AppState {
 impl AppState {
     pub async fn new() -> Result<(Arc<Self>, JoinHandle<Result<(), AppError>>), AppError> {
         let redis_future = init_redis();
+
         let (database_session, database_queries) = init_database().await?;
         expire_ttl(database_session.clone(), &database_queries).await?;
         let expire_ttl_future = spawn_ttl_task(database_session.clone(), &database_queries);
+
         let meili_future = init_meilisearch(database_session.clone(), &database_queries);
 
         let config = Config::load()?;
@@ -39,7 +42,7 @@ impl AppState {
         expire_ttl_future.await?;
         let (meili_client, meili_reindex_future, item_counter) = meili_future.await?;
 
-        set_metric(
+        set_redis_metric(
             redis_connection_manager.clone(),
             &format!(
                 "{}:{}:{}",

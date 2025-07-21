@@ -3,7 +3,7 @@ use crate::{
         bot::{chat::start_bot, photo::photo_handler},
         microservices::{
             cdc::start_cdc,
-            database::schema::{KEYSPACE, columns::items, tables},
+            database::schema::{BOILER_SWAP_KEYSPACE, columns::boiler_swap::items, tables},
         },
         models::{METRICS_ROUTE, RedisAction, WebsitePath, WebsiteRoute},
         web::{
@@ -150,8 +150,8 @@ async fn main() -> Result<(), AppError> {
 
     let (mut cdc_reader, cdc_future) = start_cdc(
         state.clone(),
-        KEYSPACE,
-        tables::ITEMS,
+        BOILER_SWAP_KEYSPACE,
+        tables::boiler_swap::ITEMS,
         items::ITEM_ID,
         RedisAction::DeletedItem.as_ref(),
         WebsitePath::BoilerSwap.as_ref(),

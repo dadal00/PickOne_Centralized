@@ -16,10 +16,10 @@ use super::{
 use crate::{
     AppError, AppState,
     api::{
-        microservices::redis::incr_visitors,
         models::{Account, METRICS_ROUTE, PHOTOS_PREFIX, RedisAction, Token, WebsitePath},
         utilities::{get_hashed_ip, get_key, get_website_path},
     },
+    metrics::incr_visitors,
 };
 use axum::{
     Extension, Json,

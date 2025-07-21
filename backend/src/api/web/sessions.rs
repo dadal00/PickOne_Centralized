@@ -10,20 +10,35 @@ use crate::{
     api::{
         microservices::{
             database::core::{get_user, insert_user},
-            redis::{
-                clear_all_keys, increment_lock_key, insert_id, insert_session, is_redis_locked,
-                is_temporarily_locked, remove_id,
-            },
+            redis::{clear_all_keys, insert_id, remove_id},
         },
         models::{Account, Action, RedisAccount, RedisAction, VerifiedTokenResult, WebsitePath},
         utilities::get_key,
+        web::lock::{increment_lock_key, is_redis_locked, is_temporarily_locked},
     },
 };
 use axum::http::header::HeaderMap;
 use chrono::Utc;
+use once_cell::sync::Lazy;
+use redis::{AsyncTypedCommands, Script};
 use std::sync::Arc;
 use tokio::task::spawn_blocking;
 use uuid::Uuid;
+
+static INSERT_SESSION_SCRIPT: Lazy<Script> = Lazy::new(|| {
+    Script::new(
+        r#"
+        redis.call("SETEX", KEYS[1], tonumber(ARGV[3]), ARGV[2])
+        local length = redis.call("LPUSH", KEYS[2], ARGV[1])
+        redis.call("EXPIRE", KEYS[2], tonumber(ARGV[3]))
+        if length > tonumber(ARGV[4]) then
+            local removed_id = redis.call("RPOP", KEYS[2])
+            local removed_key = ARGV[5] .. removed_id
+            redis.call("DEL", removed_key)
+        end
+    "#,
+    )
+});
 
 pub async fn create_temporary_session(
     state: Arc<AppState>,
@@ -371,4 +386,58 @@ pub fn create_auth_redis_account(
         issued_timestamp: Some(Utc::now().timestamp_millis()),
         password_hash,
     }
+}
+
+pub async fn delete_all_sessions(
+    state: Arc<AppState>,
+    website_path: &str,
+    key: &str,
+    key_secondary: &str,
+    email: &str,
+) -> Result<(), AppError> {
+    let mut pipe = redis::pipe();
+
+    for session_id in state
+        .redis_connection_manager
+        .clone()
+        .lrange(
+            format!("{}:{}:{}", website_path, key_secondary, email),
+            0,
+            -1,
+        )
+        .await?
+    {
+        pipe.del(format!("{}:{}:{}", website_path, key, session_id))
+            .ignore();
+    }
+
+    pipe.del(format!("{}:{}:{}", website_path, key_secondary, email))
+        .ignore();
+
+    pipe.query_async::<()>(&mut state.redis_connection_manager.clone())
+        .await?;
+
+    Ok(())
+}
+
+async fn insert_session(
+    state: Arc<AppState>,
+    website_path: &str,
+    key: &str,
+    session_id: &str,
+    key_secondary: &str,
+    email: &str,
+) -> Result<(), AppError> {
+    let _: () = INSERT_SESSION_SCRIPT
+        .key(format!("{}:{}:{}", website_path, key, session_id))
+        .key(format!("{}:{}:{}", website_path, key_secondary, email))
+        .arg(session_id)
+        .arg(email)
+        .arg(state.config.session.session_duration_seconds)
+        .arg(state.config.session.max_sessions)
+        .arg(format!("{}:{}:", website_path, key))
+        .invoke_async(&mut state.redis_connection_manager.clone())
+        .await?;
+
+    Ok(())
 }

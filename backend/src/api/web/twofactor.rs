@@ -1,5 +1,5 @@
-use super::lock::check_forgot_lock;
-use crate::{AppError, AppState, api::microservices::redis::increment_lock_key};
+use super::lock::{check_forgot_lock, increment_lock_key};
+use crate::{AppError, AppState};
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     transport::smtp::authentication::Credentials,

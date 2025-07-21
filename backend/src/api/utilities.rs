@@ -1,8 +1,8 @@
 use super::{
-    microservices::redis::{incr_visitors, try_get},
+    microservices::redis::try_get,
     models::{RedisAction, VerifiedTokenResult, WebsitePath},
 };
-use crate::{AppError, AppState, WebsiteRoute};
+use crate::{AppError, AppState, WebsiteRoute, metrics::incr_visitors};
 use axum::{extract::Request, http::header::HeaderMap};
 use sha2::{Digest, Sha256};
 use std::{net::IpAddr, sync::Arc};
