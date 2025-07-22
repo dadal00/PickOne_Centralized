@@ -1979,7 +1979,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{swarm_service=\"boiler_caddy\"} | json | line_format \"{{.status}}\"",
+          "expr": "{swarm_service=\"main_caddy\"} | json | line_format \"{{.status}}\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -2097,7 +2097,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{swarm_service=\"boiler_caddy\"} | json | line_format \"{{.status}}\"",
+          "expr": "{swarm_service=\"main_caddy\"} | json | line_format \"{{.status}}\"",
           "queryType": "range",
           "refId": "A"
         }
@@ -2198,7 +2198,7 @@
             "uid": "loki"
           },
           "editorMode": "code",
-          "expr": "{swarm_service=\"boiler_caddy\"} | json | line_format \"- [HTTP Status: {{.status}} - Duration: {{.duration}} - Client IP: {{.request_client_ip}} - Request: {{.request_uri}}]\"",
+          "expr": "{swarm_service=\"main_caddy\"} | json | line_format \"- [HTTP Status: {{.status}} - Duration: {{.duration}} - Client IP: {{.request_client_ip}} - Request: {{.request_uri}}]\"",
           "queryType": "range",
           "refId": "A"
         }

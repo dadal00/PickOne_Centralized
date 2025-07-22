@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 2,
+  "id": 6,
   "links": [],
   "panels": [
     {
@@ -215,7 +215,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "up{job=\"db-metrics\"}",
+          "expr": "up{job=\"scyllaDB-metrics\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
