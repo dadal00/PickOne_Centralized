@@ -1,6 +1,6 @@
 use super::schema::{
-    KEYSPACE,
-    columns::{items, users},
+    BOILER_SWAP_KEYSPACE,
+    columns::boiler_swap::{items, users},
     tables,
 };
 use crate::{AppError, config::try_load};
@@ -11,7 +11,7 @@ use scylla::{
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct DatabaseQueries {
+pub struct BoilerSwap {
     pub get_user: PreparedStatement,
     pub insert_user: PreparedStatement,
     pub check_lock: PreparedStatement,
@@ -23,7 +23,12 @@ pub struct DatabaseQueries {
     pub get_cron_items: PreparedStatement,
 }
 
-impl DatabaseQueries {
+#[derive(Clone)]
+pub struct DatabaseQueries {
+    pub boiler_swap: BoilerSwap,
+}
+
+impl BoilerSwap {
     pub async fn init(session: &Session) -> Result<Self, AppError> {
         Ok(Self {
             get_user: session
@@ -31,16 +36,16 @@ impl DatabaseQueries {
                 "SELECT {}, {} FROM {}.{} WHERE {} = ?",
                 users::PASSWORD_HASH,
                 users::LOCKED,
-                KEYSPACE,
-                tables::USERS,
+                BOILER_SWAP_KEYSPACE,
+                tables::boiler_swap::USERS,
                 users::PRIMARY_KEY
             ))
             .await?,
         insert_user: session
             .prepare(format!(
                 "INSERT INTO {}.{} ({}, {}, {}) VALUES (?, ?, ?) USING TTL {}",
-                KEYSPACE,
-                tables::USERS,
+                BOILER_SWAP_KEYSPACE,
+                tables::boiler_swap::USERS,
                 users::EMAIL,
                 users::PASSWORD_HASH,
                 users::LOCKED,
@@ -51,16 +56,16 @@ impl DatabaseQueries {
             .prepare(format!(
                 "SELECT {} FROM {}.{} WHERE {} = ?",
                 users::LOCKED,
-                KEYSPACE,
-                tables::USERS,
+                BOILER_SWAP_KEYSPACE,
+                tables::boiler_swap::USERS,
                 users::PRIMARY_KEY
             ))
             .await?,
         update_lock: session
             .prepare(format!(
                 "UPDATE {}.{} SET {} = ? WHERE {} = ?",
-                KEYSPACE,
-                tables::USERS,
+                BOILER_SWAP_KEYSPACE,
+                tables::boiler_swap::USERS,
                 users::LOCKED,
                 users::PRIMARY_KEY
             ))
@@ -68,8 +73,8 @@ impl DatabaseQueries {
         unlock_account: session
             .prepare(format!(
                 "UPDATE {}.{} SET {} = false, {} = ? WHERE {} = ?",
-                KEYSPACE,
-                tables::USERS,
+                BOILER_SWAP_KEYSPACE,
+                tables::boiler_swap::USERS,
                 users::LOCKED,
                 users::PASSWORD_HASH,
                 users::PRIMARY_KEY
@@ -78,8 +83,8 @@ impl DatabaseQueries {
         insert_item: session
             .prepare(format!(
                 "INSERT INTO {}.{} ({}, {}, {}, {}, {}, {}, {}, {}) VALUES (?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?",
-                KEYSPACE,
-                tables::ITEMS,
+                BOILER_SWAP_KEYSPACE,
+                tables::boiler_swap::ITEMS,
                 items::ITEM_ID,
                 items::ITEM_TYPE,
                 items::TITLE,
@@ -102,8 +107,8 @@ impl DatabaseQueries {
                     items::DESCRIPTION,
                     items::EMOJI,
                     items::EXPIRATION_DATE,
-                    KEYSPACE,
-                    tables::ITEMS
+                    BOILER_SWAP_KEYSPACE,
+                    tables::boiler_swap::ITEMS
                 )).with_page_size(100),
             )
             .await?,
@@ -113,19 +118,27 @@ impl DatabaseQueries {
                     "SELECT {}, {} FROM {}.{}", 
                     items::ITEM_ID,
                     items::EXPIRATION_DATE,
-                    KEYSPACE,
-                    tables::ITEMS
+                    BOILER_SWAP_KEYSPACE,
+                    tables::boiler_swap::ITEMS
                 )).with_page_size(100),
             )
             .await?,
         delete_item: session
             .prepare(format!(
                 "DELETE FROM {}.{} WHERE {} = ?",
-                KEYSPACE,
-                tables::ITEMS,
+                BOILER_SWAP_KEYSPACE,
+                tables::boiler_swap::ITEMS,
                 items::ITEM_ID,
             ))
             .await?,
+        })
+    }
+}
+
+impl DatabaseQueries {
+    pub async fn init(session: &Session) -> Result<Self, AppError> {
+        Ok(Self {
+            boiler_swap: BoilerSwap::init(session).await?,
         })
     }
 }
@@ -147,7 +160,7 @@ pub async fn init_database() -> Result<(Arc<Session>, DatabaseQueries), AppError
 
 async fn create_tables(session: &Session) -> Result<(), AppError> {
     session.query_unpaged(
-        format!("CREATE KEYSPACE IF NOT EXISTS {} WITH REPLICATION = {{'class': 'SimpleStrategy', 'replication_factor': 1}}", KEYSPACE),
+        format!("CREATE KEYSPACE IF NOT EXISTS {} WITH REPLICATION = {{'class': 'SimpleStrategy', 'replication_factor': 1}}", BOILER_SWAP_KEYSPACE),
         &[],
     )
     .await?;
@@ -161,8 +174,8 @@ async fn create_tables(session: &Session) -> Result<(), AppError> {
             {} {},
             PRIMARY KEY({})
         )",
-                KEYSPACE,
-                tables::USERS,
+                BOILER_SWAP_KEYSPACE,
+                tables::boiler_swap::USERS,
                 users::EMAIL,
                 users::EMAIL_TYPE,
                 users::PASSWORD_HASH,
@@ -189,8 +202,8 @@ async fn create_tables(session: &Session) -> Result<(), AppError> {
             {} {},
             PRIMARY KEY({})
         ) WITH cdc = {{'enabled': true}}",
-                KEYSPACE,
-                tables::ITEMS,
+                BOILER_SWAP_KEYSPACE,
+                tables::boiler_swap::ITEMS,
                 items::ITEM_ID,
                 items::ITEM_ID_TYPE,
                 items::ITEM_TYPE,

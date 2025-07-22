@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { appState } from '$lib/swap/AppState.svelte'
-	import Email from '$lib/swap/components/auth/Email.svelte'
-	import Password from '$lib/swap/components/auth/Password.svelte'
+	import Email from '$lib/swap/components/auth/subcomponents/Email.svelte'
+	import Password from '$lib/swap/components/auth/subcomponents/Password.svelte'
 	import { login, signup, forgot } from '$lib/swap/helpers/auth'
 	import type { Account, TabOptions } from '$lib/swap/models'
 	import { onDestroy, onMount } from 'svelte'

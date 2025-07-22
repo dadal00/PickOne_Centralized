@@ -1,3 +1,4 @@
+use crate::AppError::{BadRequest, Unauthorized};
 use anyhow::Error as anyhowError;
 use axum::{
     http::StatusCode,
@@ -103,16 +104,26 @@ pub enum AppError {
 
     #[error("Reqwest error: {0}")]
     Reqwest(#[from] reqwestError),
+
+    #[error("Invalid Credentials: {0}")]
+    Unauthorized(String),
+
+    #[error("Malformed payload: {0}")]
+    BadRequest(String),
 }
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, message) = {
-            error!("Server error: {}", self);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal server error".to_string(),
-            )
+        let (status, message) = match &self {
+            Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg.clone()),
+            BadRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
+            _ => {
+                error!("Server error: {}", self);
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "Internal server error".to_string(),
+                )
+            }
         };
 
         (status, message).into_response()

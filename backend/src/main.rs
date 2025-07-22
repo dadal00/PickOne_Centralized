@@ -1,18 +1,21 @@
 use crate::{
     api::{
         bot::{chat::start_bot, photo::photo_handler},
-        handlers::{
-            api_token_check, authenticate_handler, delete_handler, forgot_handler,
-            post_item_handler, resend_handler, verify_handler, visitors_handler,
-        },
         microservices::{
-            cdc::start_cdc,
-            database::schema::{KEYSPACE, columns::items, tables},
+            cdc::{RedisCDCParams, ScyllaCDCParams, start_cdc},
+            database::schema::{BOILER_SWAP_KEYSPACE, columns::boiler_swap::items, tables},
         },
-        models::{RedisAction, WebsitePath},
+        web::{
+            handlers::{
+                api_token_check, authenticate_handler, delete_handler, forgot_handler,
+                resend_handler, verify_handler, visitors_handler,
+            },
+            models::{METRICS_ROUTE, RedisAction, WebsitePath, WebsiteRoute},
+            swap::handlers::post_item_handler,
+        },
     },
     error::AppError,
-    metrics::metrics_handler,
+    metrics::{RedisMetricAction, metrics_handler},
     signals::shutdown_signal,
     state::AppState,
 };
@@ -64,38 +67,71 @@ async fn main() -> Result<(), AppError> {
 
     let app = Router::new()
         .route(
-            &format!("/{}/api/visitors", WebsitePath::Home.as_ref()),
+            &format!(
+                "/{}/{}/visitors",
+                WebsitePath::Home.as_ref(),
+                WebsiteRoute::Api.as_ref()
+            ),
             post(visitors_handler),
         )
         .route(
-            &format!("/{}/api/authenticate", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+                WebsiteRoute::Authenticate.as_ref()
+            ),
             post(authenticate_handler),
         )
         .route(
-            &format!("/{}/api/verify", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+                WebsiteRoute::Verify.as_ref()
+            ),
             post(verify_handler),
         )
         .route(
-            &format!("/{}/api/delete", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+                WebsiteRoute::Delete.as_ref()
+            ),
             delete(delete_handler),
         )
         .route(
-            &format!("/{}/api/forgot", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+                WebsiteRoute::Forgot.as_ref()
+            ),
             post(forgot_handler),
         )
         .route(
-            &format!("/{}/api/post-item", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/post-item",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref()
+            ),
             post(post_item_handler),
         )
         .route(
-            &format!("/{}/api/resend", WebsitePath::BoilerSwap.as_ref()),
+            &format!(
+                "/{}/{}/{}",
+                WebsitePath::BoilerSwap.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+                WebsiteRoute::Resend.as_ref()
+            ),
             post(resend_handler),
         )
         .route(
             &format!("/{}/:id", WebsitePath::Photos.as_ref()),
             get(photo_handler),
         )
-        .route("/metrics", get(metrics_handler))
+        .route(METRICS_ROUTE, get(metrics_handler))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             api_token_check,
@@ -113,11 +149,17 @@ async fn main() -> Result<(), AppError> {
 
     let (mut cdc_reader, cdc_future) = start_cdc(
         state.clone(),
-        KEYSPACE,
-        tables::ITEMS,
-        items::ITEM_ID,
-        RedisAction::DeletedItem.as_ref(),
-        WebsitePath::BoilerSwap.as_ref(),
+        ScyllaCDCParams {
+            keyspace: BOILER_SWAP_KEYSPACE.to_string(),
+            table: tables::boiler_swap::ITEMS.to_string(),
+            id_name: items::ITEM_ID.to_string(),
+        },
+        WebsitePath::BoilerSwap,
+        RedisCDCParams {
+            metric: RedisMetricAction::Items.as_ref().to_string(),
+            deletion_name: RedisAction::DeletedItem.as_ref().to_string(),
+            metric_prefix: RedisAction::Metric.as_ref().to_string(),
+        },
     )
     .await?;
 

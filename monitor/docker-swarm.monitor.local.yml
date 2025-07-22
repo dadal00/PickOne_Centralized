@@ -9,7 +9,6 @@ services:
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_USERS_DEFAULT_THEME=light
     ports:
       - "3000:3000"
     deploy:
@@ -21,8 +20,10 @@ services:
     networks:
       - monitor_net
       - main_net
+    secrets:
+      - MEILI_ADMIN_KEY
     volumes:
-      - ./prometheus_config.local.yml:/etc/prometheus/prometheus_config.yml
+      - ./prometheus_config.yml:/etc/prometheus/prometheus_config.yml
       - ./prometheus_data:/prometheus_data
     command:
       - "--config.file=/etc/prometheus/prometheus_config.yml"
@@ -57,10 +58,44 @@ services:
         "/www/report.html",
         "--real-time-html",
         "--port=7890",
+        "--geoip-database=/mmdb/GeoLite2-City.mmdb",
+        "--geoip-database=/mmdb/GeoLite2-Country.mmdb",
         "--keep-last=356",
         "--no-global-config",
         "--log-format=CADDY",
       ]
+
+  node_exporter:
+    image: prom/node-exporter:v1.9.1@sha256:d00a542e409ee618a4edc67da14dd48c5da66726bbd5537ab2af9c1dfc442c8a
+    networks:
+      - monitor_net
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.74.0-alpine@sha256:7eb52534fc92c5bebbf3ad89abf18d205ade8905c116394c130989ef9491a06c
+    networks:
+      - monitor_net
+      - main_net
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      - REDIS_ADDR=${RUST_REDIS_URL}
+
+secrets:
+  MEILI_ADMIN_KEY:
+    external: true
 
 networks:
   main_net:

@@ -34,6 +34,7 @@
 	})
 </script>
 
+<h1 class="text-3xl font-bold mb-8">Browse All Items</h1>
 <div class="bg-white rounded-lg shadow-sm border p-6 mb-8">
 	<div class="flex flex-col lg:flex-row gap-4">
 		<div class="flex-1 relative">

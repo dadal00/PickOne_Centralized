@@ -83,6 +83,7 @@ pub fn overlay_photo(
     center_y: u32,
 ) {
     let (overlay_width, overlay_height) = overlay.dimensions();
+
     imageops::overlay(
         base,
         overlay,
@@ -131,7 +132,9 @@ pub async fn download_photo(
 
 pub fn photo_to_bytes(image: &DynamicImage, format: ImageFormat) -> Result<Vec<u8>, AppError> {
     let mut bytes: Vec<u8> = Vec::new();
+
     image.write_to(&mut Cursor::new(&mut bytes), format)?;
+
     Ok(bytes)
 }
 
@@ -140,11 +143,12 @@ pub async fn photo_handler(
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, AppError> {
     match get_bytes(state.clone(), RedisBotAction::QRPicture.as_ref(), &id).await? {
-        Some(bytes) => {
-            let photo_bytes = photo_to_bytes(&load_from_memory(&bytes)?, Jpeg);
-
-            Ok((StatusCode::OK, JPEG_HEADER.clone(), photo_bytes).into_response())
-        }
+        Some(bytes) => Ok((
+            StatusCode::OK,
+            JPEG_HEADER.clone(),
+            photo_to_bytes(&load_from_memory(&bytes)?, Jpeg),
+        )
+            .into_response()),
         None => Ok((StatusCode::NOT_FOUND, "Not found").into_response()),
     }
 }

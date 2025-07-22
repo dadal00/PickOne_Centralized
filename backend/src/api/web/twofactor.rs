@@ -1,8 +1,5 @@
-use super::microservices::{
-    database::core::get_user,
-    redis::{increment_lock_key, is_redis_locked},
-};
-use crate::{AppError, AppState};
+use super::locks::{check_forgot_lock, increment_lock_key};
+use crate::{AppError, AppState, WebsitePath};
 use lettre::{
     AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor,
     transport::smtp::authentication::Credentials,
@@ -52,46 +49,27 @@ pub fn spawn_code_task(
     email: String,
     token: String,
     forgot_key: Option<String>,
-    website_path: String,
+    website_path: WebsitePath,
 ) {
     tokio::spawn(async move {
-        if forgot_key.is_some() {
-            match get_user(state.clone(), &email).await {
-                Ok(Some(_)) => (),
-                Ok(None) => return,
-                Err(_) => return,
-            }
-
-            if let Ok(is_locked) = is_redis_locked(
-                state.clone(),
-                &website_path,
-                &forgot_key.clone().expect("is_some failed"),
-                &email,
-                &state.config.authentication.verify_max_attempts,
-            )
-            .await
-            {
-                if is_locked {
-                    return;
-                }
-            }
+        if check_forgot_lock(state.clone(), &email, &forgot_key, &website_path).await {
+            return;
         }
+
         if let Err(error) = send_code_email(state.clone(), &email, &token).await {
             match error {
-                AppError::LettreAddress(msg) => {
-                    debug!("Invalid email: {}", msg);
-                }
-                AppError::LettreTransport(msg) => {
-                    debug!("Transport error: {}", msg);
-                }
-                other => {
-                    warn!("Unexpected error: {:?}", other);
-                }
+                AppError::LettreAddress(msg) => debug!("Invalid email: {}", msg),
+                AppError::LettreTransport(msg) => debug!("Transport error: {}", msg),
+                other => warn!("Unexpected error: {:?}", other),
             }
-        } else if forgot_key.is_some()
+
+            return;
+        }
+
+        if forgot_key.is_some()
             && (increment_lock_key(
                 state.clone(),
-                &website_path,
+                website_path.as_ref(),
                 &forgot_key.expect("is_some failed"),
                 &email,
                 &state.config.authentication.verify_lock_duration_seconds,
@@ -99,7 +77,6 @@ pub fn spawn_code_task(
             )
             .await)
                 .is_err()
-        {
-        }
+        {}
     });
 }

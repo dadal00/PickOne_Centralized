@@ -1,13 +1,13 @@
 use super::database::{
-    core::convert_db_items,
     init::DatabaseQueries,
-    schema::{columns::items, tables},
+    schema::{columns::boiler_swap::items, tables},
 };
 use crate::{
     AppError,
-    api::models::ItemRow,
+    api::{web::swap::database::convert_db_items, web::swap::models::ItemRow},
     config::{read_secret, try_load},
 };
+use anyhow::Result as anyResult;
 use meilisearch_sdk::{
     client::*,
     settings::{MinWordSizeForTypos, Settings, TypoToleranceSettings},
@@ -47,7 +47,7 @@ pub async fn init_meilisearch(
     let settings = init_settings();
 
     meili_client
-        .index(tables::ITEMS)
+        .index(tables::boiler_swap::ITEMS)
         .set_settings(&settings)
         .await
         .unwrap();
@@ -60,7 +60,7 @@ pub async fn init_meilisearch(
             session_clone,
             queries_clone,
             client_clone,
-            tables::ITEMS,
+            tables::boiler_swap::ITEMS,
             items::ITEM_ID,
             item_counter_clone,
         )
@@ -84,7 +84,7 @@ pub async fn reindex(
 
     loop {
         let (query_result, paging_state_response) = database_session
-            .execute_single_page(&database_queries.get_items, &[], paging_state)
+            .execute_single_page(&database_queries.boiler_swap.get_items, &[], paging_state)
             .await?;
 
         let row_result = query_result.into_rows_result()?;
@@ -117,7 +117,7 @@ pub async fn add_items<T>(
     index_name: &str,
     items: &[T],
     id_name: &str,
-) -> anyhow::Result<()>
+) -> anyResult<()>
 where
     T: Serialize + Send + Sync,
 {
@@ -127,30 +127,29 @@ where
         .await?
         .wait_for_completion(&meili_client, None, None)
         .await?;
+
     Ok(())
 }
 
-pub async fn delete_item(
-    meili_client: Arc<Client>,
-    index_name: &str,
-    key: Uuid,
-) -> anyhow::Result<()> {
+pub async fn delete_item(meili_client: Arc<Client>, index_name: &str, key: Uuid) -> anyResult<()> {
     meili_client
         .index(index_name)
         .delete_document(key)
         .await?
         .wait_for_completion(&meili_client, None, None)
         .await?;
+
     Ok(())
 }
 
-pub async fn clear_index(meili_client: Arc<Client>, index_name: &str) -> anyhow::Result<()> {
+pub async fn clear_index(meili_client: Arc<Client>, index_name: &str) -> anyResult<()> {
     meili_client
         .index(index_name)
         .delete_all_documents()
         .await?
         .wait_for_completion(&meili_client, None, None)
         .await?;
+
     Ok(())
 }
 

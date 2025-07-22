@@ -6,10 +6,10 @@
 
 <svelte:head>
 	<title>Browse Items - BoilerSwap</title>
+	<meta name="description" content="Find new items!" />
 </svelte:head>
 
 <div class="container mx-auto px-6 py-8">
-	<h1 class="text-3xl font-bold mb-8">Browse All Items</h1>
 	<BrowseSearch />
 	<Items />
 	<PageButtons />

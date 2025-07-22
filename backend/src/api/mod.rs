@@ -1,9 +1,3 @@
 pub mod bot;
-pub mod handlers;
-pub mod lock;
 pub mod microservices;
-pub mod models;
-pub mod sessions;
-pub mod twofactor;
-pub mod utilities;
-pub mod verify;
+pub mod web;
