@@ -33,15 +33,10 @@ export const websiteMeta: Record<Website, WebsiteMeta> = {
 			gradientEnd: '#f59e0b'
 		},
 		link: PUBLIC_SVELTE_SWAP_ROOT
-	},
-	voting: {
-		label: 'Vote',
-		color: '#d064dd',
-		link: '/'
 	}
 }
 
-type Website = 'swap' | 'photos' | 'voting' | 'home'
+type Website = 'swap' | 'photos' | 'home'
 
 export type chartConfig = {
 	width: number

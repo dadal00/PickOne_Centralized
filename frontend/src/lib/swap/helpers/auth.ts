@@ -1,21 +1,22 @@
 import { goto } from '$app/navigation'
-import {
-	PUBLIC_SWAP_BACKEND_PATH,
-	PUBLIC_CODE_LENGTH,
-	PUBLIC_MIN_PASSWORD_LENGTH,
-	PUBLIC_SVELTE_SWAP_ROOT
-} from '$env/static/public'
+import { PUBLIC_SWAP_BACKEND_PATH, PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
 import { Status, type Account } from '$lib/swap/models'
 import { appState } from '$lib/swap/AppState.svelte'
-import { fetchBackend } from './utils'
+import {
+	fetchBackend,
+	isLimited,
+	isSignedIn,
+	isUpdating,
+	isResetting,
+	isCodeGood,
+	isPasswordGood,
+	isVerifying,
+	isEmailGood,
+	isSignUpGood
+} from './utils'
 
 export async function forgot(email: string): Promise<void> {
-	if (appState.getLimited()) {
-		return
-	}
-
-	if (!/.+@purdue\.edu$/.test(email)) {
-		appState.setAuthError('Email must be a Purdue address')
+	if (isLimited() || !isEmailGood(email)) {
 		return
 	}
 
@@ -30,22 +31,13 @@ export async function forgot(email: string): Promise<void> {
 }
 
 export async function login(account: Account): Promise<void> {
-	if (appState.getLimited()) {
-		return
-	}
-
-	account.action = 'login'
-
-	if (!/.+@purdue\.edu$/.test(account.email)) {
-		appState.setAuthError('Email must be a Purdue address')
-		return
-	}
-	if (account.password === '' || account.password.length < Number(PUBLIC_MIN_PASSWORD_LENGTH)) {
-		appState.setAuthError('Password must be 10+ characters')
+	if (isLimited() || !isEmailGood(account.email) || !isPasswordGood(account.password)) {
 		return
 	}
 
 	try {
+		account.action = 'login'
+
 		appState.nowLimited()
 
 		await fetchBackend('/authenticate', account)
@@ -56,26 +48,13 @@ export async function login(account: Account): Promise<void> {
 }
 
 export async function signup(account: Account, confirmPassword: string): Promise<void> {
-	if (appState.getLimited()) {
-		return
-	}
-
-	account.action = 'signup'
-
-	if (!/.+@purdue\.edu$/.test(account.email)) {
-		appState.setAuthError('Email must be a Purdue address')
-		return
-	}
-	if (account.password === '' || account.password.length < Number(PUBLIC_MIN_PASSWORD_LENGTH)) {
-		appState.setAuthError('Password must be 10+ characters')
-		return
-	}
-	if (account.password !== confirmPassword) {
-		appState.setAuthError('Passwords do not match')
+	if (!isSignUpGood(account, confirmPassword)) {
 		return
 	}
 
 	try {
+		account.action = 'signup'
+
 		appState.nowLimited()
 
 		await fetchBackend('/authenticate', account)
@@ -85,76 +64,45 @@ export async function signup(account: Account, confirmPassword: string): Promise
 	} catch (err) {}
 }
 
-export async function verify(auth_code: string): Promise<void> {
-	if (appState.getLimited()) {
-		return
-	}
-
-	if (!appState.getStatus(Status.isVerifying)) {
-		return
-	}
-
-	if (!/^\d+$/.test(auth_code) || auth_code.length != 6) {
-		appState.setAuthError('Only ' + PUBLIC_CODE_LENGTH + ' numbers')
+export async function verify(authCode: string): Promise<void> {
+	if (isLimited() || !isVerifying || !isCodeGood(authCode)) {
 		return
 	}
 
 	try {
 		appState.nowLimited()
 
-		await fetchBackend('/verify', { token: auth_code })
+		await fetchBackend('/verify', { token: authCode })
 
 		appState.setStatus(Status.isSignedIn, true)
 		goto(PUBLIC_SVELTE_SWAP_ROOT + '/browse')
 	} catch (err) {}
 }
 
-export async function verify_forget(auth_code: string) {
-	if (appState.getLimited()) {
-		return
-	}
-
-	if (!appState.getStatus(Status.isVerifyingForgot)) {
-		return
-	}
-
-	if (!/^\d+$/.test(auth_code) || auth_code.length != 6) {
-		appState.setAuthError('Only ' + PUBLIC_CODE_LENGTH + ' numbers')
+export async function verify_forget(authCode: string) {
+	if (isLimited() || !isResetting() || !isCodeGood(authCode)) {
 		return
 	}
 
 	try {
 		appState.nowLimited()
 
-		await fetchBackend('/verify', { token: auth_code })
+		await fetchBackend('/verify', { token: authCode })
 
 		appState.setStatus(Status.isVerifyingUpdate, true)
 		goto(PUBLIC_SVELTE_SWAP_ROOT + '/auth/verify/update')
 	} catch (err) {}
 }
 
-export async function update(new_password: string) {
-	if (appState.getLimited()) {
-		return
-	}
-
-	if (!appState.getStatus(Status.isVerifyingUpdate)) {
-		return
-	}
-
-	if (
-		new_password === '' ||
-		new_password.length > 100 ||
-		new_password.length < Number(PUBLIC_MIN_PASSWORD_LENGTH)
-	) {
-		appState.setAuthError('Password must be 10+ characters')
+export async function update(newPassword: string) {
+	if (isLimited() || !isUpdating() || !isPasswordGood(newPassword)) {
 		return
 	}
 
 	try {
 		appState.nowLimited()
 
-		await fetchBackend('/verify', { token: new_password })
+		await fetchBackend('/verify', { token: newPassword })
 
 		appState.setStatus(Status.isSignedIn, true)
 		goto(PUBLIC_SVELTE_SWAP_ROOT + '/browse')
@@ -162,11 +110,7 @@ export async function update(new_password: string) {
 }
 
 export async function signout() {
-	if (appState.getLimited()) {
-		return
-	}
-
-	if (!appState.getStatus(Status.isSignedIn)) {
+	if (isLimited() || !isSignedIn()) {
 		return
 	}
 
@@ -185,10 +129,7 @@ export async function signout() {
 }
 
 export async function resend(resendSeconds: number) {
-	if (resendSeconds != 0) {
-		return
-	}
-	if (appState.getLimited()) {
+	if (resendSeconds != 0 || isLimited()) {
 		return
 	}
 
@@ -201,6 +142,7 @@ export async function resend(resendSeconds: number) {
 
 	if (!response.ok) {
 		appState.setAuthError((await response.text()).slice(0, 50))
+
 		throw new Error(`HTTP error! status: ${response.status}`)
 	}
 }
