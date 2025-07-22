@@ -1,7 +1,7 @@
 global:
-  scrape_interval: 1m
-  evaluation_interval: 5m
-  scrape_timeout: 30s
+  scrape_interval: 15s
+  evaluation_interval: 1m
+  scrape_timeout: 10s
 
 scrape_configs:
   - job_name: "main_app-metrics"
@@ -12,7 +12,8 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__param_target]
         target_label: instance
-  - job_name: "db-metrics"
+
+  - job_name: "scyllaDB-metrics"
     scheme: http
     metrics_path: "/metrics"
     static_configs:
@@ -20,9 +21,10 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance
-  - job_name: "search-metrics"
+
+  - job_name: "meilisearch-metrics"
     scheme: http
-    metrics_path: "/stats"
+    metrics_path: "/metrics"
     static_configs:
       - targets: ["meilisearch:7700"]
     relabel_configs:
@@ -31,3 +33,15 @@ scrape_configs:
     authorization:
       type: Bearer
       credentials_file: /run/secrets/MEILI_ADMIN_KEY
+
+  - job_name: "caddy"
+    scheme: http
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["caddy:2019"]
+
+  - job_name: "node_exporter"
+    scheme: http
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["node_exporter:9100"]

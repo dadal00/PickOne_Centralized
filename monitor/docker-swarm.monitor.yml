@@ -9,7 +9,6 @@ services:
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_USERS_DEFAULT_THEME=light
     ports:
       - "3000:3000"
     deploy:
@@ -65,6 +64,23 @@ services:
         "--no-global-config",
         "--log-format=CADDY",
       ]
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    networks:
+      - monitor_net
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
 
 secrets:
   MEILI_ADMIN_KEY:

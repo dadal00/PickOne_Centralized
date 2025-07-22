@@ -1,4 +1,7 @@
 {
+	admin 0.0.0.0:2019
+	metrics
+
 	order authenticate before respond
 	order authorize before reverse_proxy
 
@@ -71,7 +74,11 @@
 	}
 
 	log {
-		output file /var/log/caddy/access.log
+		output file /var/log/caddy/access.log {
+			roll_size 100MiB
+			roll_keep 5
+			roll_keep_for 100d
+		}
 		level INFO
 	}
 
