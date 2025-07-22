@@ -66,7 +66,7 @@ services:
       ]
 
   node_exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.9.1@sha256:d00a542e409ee618a4edc67da14dd48c5da66726bbd5537ab2af9c1dfc442c8a
     networks:
       - monitor_net
     deploy:
@@ -81,6 +81,17 @@ services:
       - "--path.procfs=/host/proc"
       - "--path.sysfs=/host/sys"
       - "--path.rootfs=/rootfs"
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.74.0-alpine@sha256:7eb52534fc92c5bebbf3ad89abf18d205ade8905c116394c130989ef9491a06c
+    networks:
+      - monitor_net
+      - main_net
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      - REDIS_ADDR=${RUST_REDIS_URL}
 
 secrets:
   MEILI_ADMIN_KEY:
