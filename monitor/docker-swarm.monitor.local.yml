@@ -58,6 +58,8 @@ services:
         "/www/report.html",
         "--real-time-html",
         "--port=7890",
+        "--geoip-database=/mmdb/GeoLite2-City.mmdb",
+        "--geoip-database=/mmdb/GeoLite2-Country.mmdb",
         "--keep-last=356",
         "--no-global-config",
         "--log-format=CADDY",
