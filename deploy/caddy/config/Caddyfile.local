@@ -78,4 +78,6 @@
 	}
 
 	tls internal
+
+	encode gzip zstd
 }
