@@ -22,7 +22,6 @@ static INSERT_FORMATTED_PHOTO_SCRIPT: Lazy<Script> = Lazy::new(|| {
         r#"
         local old_qr_id = redis.call("GET", KEYS[2])
         if old_qr_id then
-            redis.log(redis.LOG_NOTICE, "Deleting old key: " .. ARGV[5] .. ":" .. old_qr_id)
             redis.call("DEL", ARGV[5] .. ":" .. old_qr_id)
         end
         redis.call("SET", KEYS[1], ARGV[3], "EX", ARGV[4])
