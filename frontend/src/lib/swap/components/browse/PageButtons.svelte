@@ -21,13 +21,13 @@
 	</button>
 
 	<button
-		class="{appState.getOffset() + Number(PUBLIC_PAGE_SIZE) > appState.getTotalHits()
+		class="{appState.getOffset() + Number(PUBLIC_PAGE_SIZE) >= appState.getTotalHits()
 			? 'bg-gray-300 cursor-not-allowed'
 			: 'bg-yellow-400 hover:bg-yellow-500'} text-gray-800 py-2 px-4 rounded-lg transition-colors flex items-center justify-center"
 		onclick={() => {
 			if (
 				appState.getLimited() ||
-				appState.getOffset() + Number(PUBLIC_PAGE_SIZE) > appState.getTotalHits()
+				appState.getOffset() + Number(PUBLIC_PAGE_SIZE) >= appState.getTotalHits()
 			) {
 				return
 			}
