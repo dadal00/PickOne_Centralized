@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Header from '$lib/housing/components/layout/Header.svelte'
 	import '$lib/housing/housing.css'
 
 	let { children } = $props()
@@ -13,5 +14,6 @@
 </svelte:head>
 
 <main>
+	<Header />
 	{@render children()}
 </main>
