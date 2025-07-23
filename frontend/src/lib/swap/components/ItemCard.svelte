@@ -15,7 +15,7 @@
 		item: Item
 	}>()
 
-	const [expirationDays, expirationColor] = getDaysUntil(item[ItemFields.EXPIRATION_DATE])
+	const [expirationDays, expirationColor] = $derived(getDaysUntil(item[ItemFields.EXPIRATION_DATE]))
 </script>
 
 <div
