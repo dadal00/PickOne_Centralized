@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state'
 	import { appState } from '$lib/housing/AppState.svelte'
-	import { ArrowRight, Calendar, Star, ThumbsDown, ThumbsUp } from '@lucide/svelte'
-	import Button from '../templates/Button.svelte'
+	import { Calendar, Star, ThumbsDown, ThumbsUp } from '@lucide/svelte'
 	import CardPiece from '../templates/CardPiece.svelte'
 	import TabPiece from '../templates/TabPiece.svelte'
 	import Progress from '../templates/Progress.svelte'
-	import { PUBLIC_SVELTE_HOUSING_ROOT } from '$env/static/public'
+	import SearchComponent from '$lib/housing/components/search/Search.svelte'
 
 	const { housing } = $props()
 
@@ -163,17 +162,7 @@
 				</CardPiece>
 			</CardPiece>
 		{:else if activeTabValue === 'reviews'}
-			<div class="flex justify-between items-center">
-				<h3 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Student Reviews</h3>
-				<a href={PUBLIC_SVELTE_HOUSING_ROOT + '/submit-review'}>
-					<Button
-						className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all"
-					>
-						Write a Review
-						<ArrowRight class="h-4 w-4 ml-2" />
-					</Button>
-				</a>
-			</div>
+			<SearchComponent />
 			<div class="space-y-6">
 				{#each reviews as review}
 					<CardPiece
