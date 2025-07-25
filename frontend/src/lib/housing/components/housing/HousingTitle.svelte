@@ -23,6 +23,7 @@
 					</div>
 					<span class="font-semibold text-lg">{housing.priceRange}</span>
 				</div>
+				<p class="text-gray-600 dark:text-gray-300">{housing.address}</p>
 			</div>
 			<div class="text-center md:text-right rounded-2xl p-6 min-w-[200px]">
 				<div class="flex items-center justify-center md:justify-end space-x-3 mb-3">

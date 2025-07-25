@@ -43,7 +43,7 @@
 
 <div class="space-y-8">
 	<TabPiece
-		className="grid w-full grid-cols-3 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-100 p-1 dark:bg-gray-800/80 dark:border-gray-700"
+		className="grid w-full grid-cols-2 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-100 p-1 dark:bg-gray-800/80 dark:border-gray-700"
 		tabPiece="list"
 	>
 		<TabPiece
@@ -52,13 +52,6 @@
 			tabPiece="trigger"
 			activeClasses="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white"
 			bind:activeTabValue>Overview</TabPiece
-		>
-		<TabPiece
-			className="rounded-lg font-semibold"
-			tabValue="ratings"
-			tabPiece="trigger"
-			activeClasses="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white"
-			bind:activeTabValue>Ratings</TabPiece
 		>
 		<TabPiece
 			className="rounded-lg font-semibold"
@@ -71,61 +64,6 @@
 
 	<TabPiece tabPiece="content" className="space-y-8">
 		{#if activeTabValue === 'overview'}
-			<CardPiece
-				className="bg-white/80 backdrop-blur-sm shadow-xl border border-gray-100 rounded-2xl dark:bg-gray-800/80 dark:border-gray-700"
-				cardPiece="cardCore"
-			>
-				<CardPiece cardPiece="cardHeader">
-					<CardPiece
-						cardPiece="cardTitle"
-						className="text-2xl font-bold text-gray-900 dark:text-gray-100"
-					>
-						About {housing.name}
-					</CardPiece>
-				</CardPiece>
-				<CardPiece cardPiece="cardContent">
-					<p class="text-gray-700 dark:text-gray-300 mb-6 text-lg leading-relaxed">
-						{housing.description}
-					</p>
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-						<div>
-							<h4 class="font-bold mb-3 text-lg text-gray-900 dark:text-gray-100">Address</h4>
-							<p class="text-gray-600 dark:text-gray-300">{housing.address}</p>
-						</div>
-						<div>
-							<h4 class="font-bold mb-3 text-lg text-gray-900 dark:text-gray-100">Price Range</h4>
-							<p class="text-gray-600 dark:text-gray-300 font-semibold">{housing.priceRange}</p>
-						</div>
-					</div>
-				</CardPiece>
-			</CardPiece>
-
-			<CardPiece
-				className="bg-white/80 backdrop-blur-sm shadow-xl border border-gray-100 rounded-2xl dark:bg-gray-800/80 dark:border-gray-700"
-				cardPiece="cardCore"
-			>
-				<CardPiece cardPiece="cardHeader">
-					<CardPiece
-						cardPiece="cardTitle"
-						className="text-2xl font-bold text-gray-900 dark:text-gray-100">Amenities</CardPiece
-					>
-				</CardPiece>
-				<CardPiece cardPiece="cardContent">
-					<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-						{#each housing.amenities as amenity}
-							<div
-								class="flex items-center space-x-3 p-3 bg-yellow-50 dark:bg-yellow-900/10 rounded-xl"
-							>
-								<div
-									class="w-3 h-3 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full"
-								></div>
-								<span class="font-medium text-gray-800 dark:text-gray-200">{amenity}</span>
-							</div>
-						{/each}
-					</div>
-				</CardPiece>
-			</CardPiece>
-		{:else if activeTabValue === 'ratings'}
 			<CardPiece
 				className="bg-white/80 backdrop-blur-sm shadow-xl border border-gray-100 rounded-2xl dark:bg-gray-800/80 dark:border-gray-700"
 				cardPiece="cardCore"
@@ -161,6 +99,29 @@
 					</div>
 				</CardPiece>
 			</CardPiece>
+			<CardPiece
+				className="bg-white/80 backdrop-blur-sm shadow-xl border border-gray-100 rounded-2xl dark:bg-gray-800/80 dark:border-gray-700"
+				cardPiece="cardCore"
+			>
+				<CardPiece cardPiece="cardHeader">
+					<CardPiece
+						cardPiece="cardTitle"
+						className="text-2xl font-bold text-gray-900 dark:text-gray-100">Amenities</CardPiece
+					>
+				</CardPiece>
+				<CardPiece cardPiece="cardContent">
+					<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+						{#each housing.amenities as amenity}
+							<div class="flex items-center space-x-3 p-3 rounded-xl">
+								<div
+									class="w-3 h-3 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full"
+								></div>
+								<span class="font-medium text-gray-800 dark:text-gray-200">{amenity}</span>
+							</div>
+						{/each}
+					</div>
+				</CardPiece>
+			</CardPiece>
 		{:else if activeTabValue === 'reviews'}
 			<SearchComponent />
 			<div class="space-y-6">
@@ -185,12 +146,6 @@
 										>{review.rating}/5</span
 									>
 								</div>
-								<div class="text-sm text-gray-500">
-									<div class="flex items-center space-x-2">
-										<Calendar class="h-4 w-4" />
-										<span class="font-medium">{review.semester}</span>
-									</div>
-								</div>
 							</div>
 
 							<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
@@ -211,8 +166,11 @@
 							<div
 								class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 pt-4 border-t border-gray-100 dark:border-gray-700"
 							>
-								<div class="flex items-center space-x-4">
-									<span class="font-medium">Room: {review.roomType}</span>
+								<div class="text-sm text-gray-500">
+									<div class="flex items-center space-x-2">
+										<Calendar class="h-4 w-4" />
+										<span class="font-medium">{review.semester}</span>
+									</div>
 								</div>
 								<div class="flex items-center space-x-6">
 									<button

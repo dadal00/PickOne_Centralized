@@ -98,14 +98,6 @@
 	]
 	type Semesters = (typeof semesterOptions)[number]
 	const semesterSelect = new Select<Semesters['value']>()
-
-	const roomOptions = [
-		{ value: 'single', label: 'Single' },
-		{ value: 'double', label: 'Double' },
-		{ value: 'triple', label: 'Triple' }
-	]
-	type Rooms = (typeof roomOptions)[number]
-	const roomsSelect = new Select<Rooms['value']>()
 </script>
 
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -128,7 +120,7 @@
 			</CardPiece>
 			<CardPiece cardPiece="cardContent">
 				<form on:submit|preventDefault={handleSubmit} class="space-y-6">
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						<div class="space-y-1.5">
 							<label
 								class="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
@@ -206,38 +198,6 @@
 								</div>
 							</label>
 						</div>
-						<div class="space-y-1.5">
-							<label
-								class="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 dark:text-gray-300"
-							>
-								Room *
-								<button
-									{...roomsSelect.trigger}
-									class="flex justify-between rounded-md border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 px-3 py-2 w-full text-left"
-								>
-									{roomsSelect.valueAsString === '' ? 'Select housing' : roomsSelect.valueAsString}
-									<ChevronDown class="h-4 w-4 opacity-50 right-2" />
-								</button>
-
-								<div
-									{...roomsSelect.content}
-									class="mt-1 max-h-96 overflow-auto rounded-md border bg-white dark:bg-gray-800 dark:border-gray-700 shadow-lg z-50"
-								>
-									{#each roomOptions as option}
-										<div
-											{...roomsSelect.getOption(option.value)}
-											class="cursor-pointer select-none px-3 py-2 text-sm rounded-sm text-gray-900 dark:text-gray-100 hover:bg-yellow-300 dark:hover:bg-yellow-600"
-										>
-											{#if roomsSelect.value === option.value}
-												<span class="inline-block mr-2 text-yellow-600 dark:text-yellow-300">✓</span
-												>
-											{/if}
-											{option.label}
-										</div>
-									{/each}
-								</div>
-							</label>
-						</div>
 					</div>
 
 					<div>
@@ -260,7 +220,7 @@
 						<label
 							class="mb-4 block leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-base font-semibold dark:text-gray-200"
 							>Rate Each Category *
-							<div class="space-y-4">
+							<div class="space-y-4 mt-2">
 								{#each ratingCategories as category}
 									<div class="border rounded-lg p-4 dark:border-gray-700">
 										<div class="flex justify-between items-start mb-2">

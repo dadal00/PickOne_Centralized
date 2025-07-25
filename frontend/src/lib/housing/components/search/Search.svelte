@@ -28,7 +28,7 @@
 		<Funnel class="h-5 w-5 text-yellow-600" />
 		<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Search & Filter</h2>
 	</div>
-	<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+	<div class="grid grid-cols-1 md:grid-cols-4 gap-4 flex items-center">
 		<div class="md:col-span-2">
 			<div class="relative">
 				<Search class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
