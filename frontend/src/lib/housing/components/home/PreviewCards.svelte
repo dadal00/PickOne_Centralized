@@ -1,32 +1,11 @@
 <script lang="ts">
 	import { PUBLIC_SVELTE_HOUSING_ROOT } from '$env/static/public'
+	import { appState } from '$lib/housing/AppState.svelte'
 	import Button from '$lib/housing/components/templates/Button.svelte'
 	import CardPiece from '$lib/housing/components/templates/CardPiece.svelte'
 	import { ArrowRight, Star } from '@lucide/svelte'
 
-	const featuredHousing = [
-		{
-			id: 1,
-			name: 'Cary Quadrangle',
-			type: 'On-Campus Dorm',
-			rating: 4.2,
-			reviewCount: 156
-		},
-		{
-			id: 2,
-			name: 'Fuse Apartments',
-			type: 'Off-Campus Apartment',
-			rating: 3.8,
-			reviewCount: 89
-		},
-		{
-			id: 3,
-			name: 'Hub on Campus',
-			type: 'Off-Campus Apartment',
-			rating: 4.0,
-			reviewCount: 124
-		}
-	]
+	const featuredHousing = $derived(appState.sampleHousing(3))
 </script>
 
 <section class="py-20 px-4 sm:px-6 lg:px-8">
@@ -72,7 +51,7 @@
 						</div>
 					</CardPiece>
 					<CardPiece className="pt-0" cardPiece="cardContent">
-						<a href={PUBLIC_SVELTE_HOUSING_ROOT + '/housing'}>
+						<a href={`${PUBLIC_SVELTE_HOUSING_ROOT}/housing/${housing.id}`}>
 							<Button
 								className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all group"
 							>

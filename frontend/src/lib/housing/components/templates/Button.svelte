@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { buttonVariants } from '$lib/housing/buttonVariants'
+	import { buttonVariants } from '$lib/housing/variants/buttonVariants'
 	import type { VariantProps } from 'class-variance-authority'
 	import type { Snippet } from 'svelte'
 	import { cn } from '$lib/housing/utils'
