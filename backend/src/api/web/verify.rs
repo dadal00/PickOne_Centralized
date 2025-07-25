@@ -2,11 +2,12 @@ use super::{
     cookies::get_cookie,
     models::{Account, DummyClaims, VerifiedTokenResult},
     twofactor::CODE_REGEX,
-    utilities::{check_path, format_verified_result},
+    utilities::{format_verified_result, label_request},
 };
 use crate::{
-    AppError, AppState, RedisAction, WebsitePath,
+    AppError, AppState, RedisAction, WebsitePath, WebsiteRoute,
     config::{read_secret, try_load},
+    metrics::incr_visitors,
 };
 use argon2::{
     Algorithm::Argon2id, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier,
@@ -27,6 +28,9 @@ pub static EMAIL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^.+@purdue\.edu$
 pub static VALIDATION: Lazy<Validation> = Lazy::new(|| Validation::new(Algorithm::HS256));
 
 pub static SWAP_DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| read_decoding_key("SWAP_API_TOKEN"));
+
+pub static HOUSING_DECODING_KEY: Lazy<DecodingKey> =
+    Lazy::new(|| read_decoding_key("HOUSING_API_TOKEN"));
 
 pub static HOME_DECODING_KEY: Lazy<DecodingKey> = Lazy::new(|| read_decoding_key("HOME_API_TOKEN"));
 
@@ -66,6 +70,7 @@ pub fn verify_api_token(headers: &HeaderMap, website_path: &WebsitePath) -> bool
 
     let decoding_key = match website_path {
         WebsitePath::BoilerSwap => &SWAP_DECODING_KEY,
+        WebsitePath::Housing => &HOUSING_DECODING_KEY,
         WebsitePath::Photos => panic!("verify_api_token should not be called for Photos"),
         WebsitePath::Home => &HOME_DECODING_KEY,
     };
@@ -212,4 +217,45 @@ pub fn check_resend(payload: &VerifiedTokenResult) -> Result<(), AppError> {
         .ok_or(AppError::Unauthorized("Unable to verify".to_string()))?;
 
     Ok(())
+}
+
+async fn check_path(
+    state: Arc<AppState>,
+    request: &mut Request,
+) -> Result<Option<WebsitePath>, AppError> {
+    match request.uri().path() {
+        path if path.starts_with(&format!(
+            "/{}/{}",
+            WebsitePath::BoilerSwap.as_ref(),
+            WebsiteRoute::Api.as_ref()
+        )) =>
+        {
+            incr_visitors(state.clone(), WebsitePath::BoilerSwap).await?;
+
+            label_request(request, WebsitePath::BoilerSwap);
+
+            Ok(Some(WebsitePath::BoilerSwap))
+        }
+        path if path.starts_with(&format!(
+            "/{}/{}",
+            WebsitePath::Housing.as_ref(),
+            WebsiteRoute::Api.as_ref()
+        )) =>
+        {
+            incr_visitors(state.clone(), WebsitePath::Housing).await?;
+
+            Ok(Some(WebsitePath::Housing))
+        }
+        path if path.starts_with(&format!(
+            "/{}/{}",
+            WebsitePath::Home.as_ref(),
+            WebsiteRoute::Api.as_ref()
+        )) =>
+        {
+            incr_visitors(state.clone(), WebsitePath::Home).await?;
+
+            Ok(Some(WebsitePath::Home))
+        }
+        _ => Ok(None),
+    }
 }

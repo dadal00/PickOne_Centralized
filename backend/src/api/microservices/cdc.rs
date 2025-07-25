@@ -144,6 +144,7 @@ async fn choose_addition(
         }
         WebsitePath::Photos => panic!("Photos not implemented"),
         WebsitePath::Home => panic!("Home not implemented"),
+        WebsitePath::Housing => panic!("Housing not implemented"),
     }
 }
 
@@ -167,6 +168,7 @@ async fn choose_deletion(
         .await?),
         WebsitePath::Photos => panic!("Photos not implemented"),
         WebsitePath::Home => panic!("Home not implemented"),
+        WebsitePath::Housing => panic!("Housing not implemented"),
     }
 }
 

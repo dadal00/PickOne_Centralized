@@ -113,5 +113,8 @@ fn get_cleared_cookies(website_path: &WebsitePath) -> cookieCookieJar {
         WebsitePath::Home => {
             panic!("Home has no cookies")
         }
+        WebsitePath::Housing => {
+            panic!("Housing has no cookies")
+        }
     }
 }

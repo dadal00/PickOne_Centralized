@@ -1,7 +1,5 @@
 use super::models::{RedisAction, VerifiedTokenResult, WebsitePath};
-use crate::{
-    AppError, AppState, WebsiteRoute, api::microservices::redis::try_get, metrics::incr_visitors,
-};
+use crate::{AppError, AppState, WebsiteRoute, api::microservices::redis::try_get};
 use axum::{extract::Request, http::header::HeaderMap};
 use sha2::{Digest, Sha256};
 use std::{net::IpAddr, sync::Arc};
@@ -52,38 +50,7 @@ pub async fn format_verified_result(
     Ok(None)
 }
 
-pub async fn check_path(
-    state: Arc<AppState>,
-    request: &mut Request,
-) -> Result<Option<WebsitePath>, AppError> {
-    match request.uri().path() {
-        path if path.starts_with(&format!(
-            "/{}/{}",
-            WebsitePath::BoilerSwap.as_ref(),
-            WebsiteRoute::Api.as_ref()
-        )) =>
-        {
-            incr_visitors(state.clone(), WebsitePath::BoilerSwap).await?;
-
-            label_request(request, WebsitePath::BoilerSwap);
-
-            Ok(Some(WebsitePath::BoilerSwap))
-        }
-        path if path.starts_with(&format!(
-            "/{}/{}",
-            WebsitePath::Home.as_ref(),
-            WebsiteRoute::Api.as_ref()
-        )) =>
-        {
-            incr_visitors(state.clone(), WebsitePath::Home).await?;
-
-            Ok(Some(WebsitePath::Home))
-        }
-        _ => Ok(None),
-    }
-}
-
-fn label_request(request: &mut Request, website_path: WebsitePath) {
+pub fn label_request(request: &mut Request, website_path: WebsitePath) {
     match request.uri().path() {
         path if path
             == format!(
