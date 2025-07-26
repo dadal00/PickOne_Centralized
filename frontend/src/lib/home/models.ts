@@ -1,4 +1,4 @@
-import { PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
+import { PUBLIC_SVELTE_HOUSING_ROOT, PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
 
 export type ChartData = {
 	website: Website
@@ -33,10 +33,15 @@ export const websiteMeta: Record<Website, WebsiteMeta> = {
 			gradientEnd: '#f59e0b'
 		},
 		link: PUBLIC_SVELTE_SWAP_ROOT
+	},
+	housing: {
+		label: 'Rate',
+		color: '#5b98d9',
+		link: PUBLIC_SVELTE_HOUSING_ROOT
 	}
 }
 
-type Website = 'swap' | 'photos' | 'home'
+type Website = 'swap' | 'photos' | 'home' | 'housing'
 
 export type chartConfig = {
 	width: number

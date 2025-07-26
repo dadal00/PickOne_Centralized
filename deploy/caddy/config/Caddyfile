@@ -23,6 +23,13 @@
 			crypto key token name api_token
 		}
 
+		authorization policy verifyHousingAPI {
+			allow roles anonymous guest
+			set token sources cookie
+			crypto key verify {$HOUSING_API_TOKEN}
+			crypto key token name api_token
+		}
+
 		authorization policy verifyHomeAPI {
 			allow roles anonymous guest
 			set token sources cookie
@@ -50,6 +57,11 @@
 
 	handle {$PUBLIC_SWAP_BACKEND_PATH}/* {
 		authorize with verifySwapAPI
+		reverse_proxy {$RUST_NAME}:{$RUST_PORT}
+	}
+
+	handle {$PUBLIC_HOUSING_BACKEND_PATH}/* {
+		authorize with verifyHousingAPI
 		reverse_proxy {$RUST_NAME}:{$RUST_PORT}
 	}
 

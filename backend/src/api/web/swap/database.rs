@@ -130,6 +130,7 @@ fn is_this_for_swap(website_path: &WebsitePath) {
         WebsitePath::BoilerSwap => {}
         WebsitePath::Photos => panic!("Photos not implemented"),
         WebsitePath::Home => panic!("Home not implemented"),
+        WebsitePath::Housing => panic!("Housing not implemented"),
     }
 }
 

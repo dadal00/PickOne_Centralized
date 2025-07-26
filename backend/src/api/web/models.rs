@@ -85,6 +85,9 @@ pub enum WebsitePath {
     #[strum(serialize = "swap")]
     BoilerSwap,
 
+    #[strum(serialize = "housing")]
+    Housing,
+
     #[strum(serialize = "photos")]
     Photos,
 
