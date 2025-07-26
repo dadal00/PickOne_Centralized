@@ -68,18 +68,21 @@ services:
     networks:
       - main_net
     volumes:
-      - ${RUST_BOT_BACKGROUND_DEVICE_FOLDER_PATH}:${RUST_BOT_BACKGROUND_CONTAINER_FOLDER_PATH}
+      - ${RUST_DEVICE_FOLDER_PATH}:${RUST_CONTAINER_FOLDER_PATH}
     deploy:
       replicas: 1
       restart_policy:
         condition: on-failure
         delay: 5s
     secrets:
+      # Bot
       - RUST_BOT_CUTS_KEY
+      # Swap
       - RUST_FROM_EMAIL
       - RUST_FROM_EMAIL_PASSWORD
       - RUST_FROM_EMAIL_SERVER
       - SWAP_API_TOKEN
+      # Other
       - HOUSING_API_TOKEN
       - HOME_API_TOKEN
       - MEILI_ADMIN_KEY
@@ -92,10 +95,19 @@ services:
         loki-timeout: "10s"
         loki-retries: "3"
     environment:
+      # Server
       - RUST_PORT=${RUST_PORT}
       - RUST_LOG=${RUST_LOG}
       - RUST_DB_URI=${RUST_DB_URI}
       - RUST_REDIS_URL=${RUST_REDIS_URL}
+      - SVELTE_URL=${SVELTE_URL}
+      - MEILI_URL=${MEILI_URL}
+      - RUST_CONTAINER_FOLDER_PATH=${RUST_CONTAINER_FOLDER_PATH}
+      # Home
+      - RUST_HOME_LIMIT_MS=${RUST_HOME_LIMIT_MS}
+      # Housing
+      - RUST_HOUSING_FILE=${RUST_HOUSING_FILE}
+      # Swap
       - RUST_MAX_SESSIONS=${RUST_MAX_SESSIONS}
       - RUST_AUTH_MAX_ATTEMPTS=${RUST_AUTH_MAX_ATTEMPTS}
       - RUST_AUTH_LOCK_DURATION_SECS=${RUST_AUTH_LOCK_DURATION_SECS}
@@ -109,8 +121,7 @@ services:
       - PUBLIC_MAX_CHARS=${PUBLIC_MAX_CHARS}
       - PUBLIC_CODE_LENGTH=${PUBLIC_CODE_LENGTH}
       - PUBLIC_MIN_PASSWORD_LENGTH=${PUBLIC_MIN_PASSWORD_LENGTH}
-      - SVELTE_URL=${SVELTE_URL}
-      - MEILI_URL=${MEILI_URL}
+      # Bot
       - RUST_BOT_NUM_PICTURES=${RUST_BOT_NUM_PICTURES}
       - RUST_BOT_PICTURES_TTL=${RUST_BOT_PICTURES_TTL}
       - RUST_BOT_MAX_BYTES=${RUST_BOT_MAX_BYTES}
@@ -120,7 +131,6 @@ services:
       - RUST_BOT_PETE_FILE=${RUST_BOT_PETE_FILE}
       - RUST_BOT_TOWER_FILE=${RUST_BOT_TOWER_FILE}
       - RUST_BOT_FOUNTAIN_FILE=${RUST_BOT_FOUNTAIN_FILE}
-      - RUST_HOME_LIMIT_MS=${RUST_HOME_LIMIT_MS}
 
   svelte:
     image: main_svelte:latest

@@ -7,8 +7,13 @@ use axum::http::{HeaderValue, header::HeaderMap};
 use image::{DynamicImage, GenericImageView, RgbaImage};
 use once_cell::sync::Lazy;
 
-pub static BACKGROUND_FOLDER: Lazy<String> =
-    Lazy::new(|| try_load("RUST_BOT_BACKGROUND_CONTAINER_FOLDER_PATH", "/assets").unwrap());
+pub static BACKGROUND_FOLDER: Lazy<String> = Lazy::new(|| {
+    format!(
+        "{}{}",
+        try_load::<String>("RUST_CONTAINER_FOLDER_PATH", "/assets").unwrap(),
+        try_load::<String>("RUST_BOT_BACKGROUND_CONTAINER_FOLDER_PATH", "/bot").unwrap()
+    )
+});
 
 pub static PHOTO_BACKGROUND: Lazy<DynamicImage> =
     Lazy::new(|| load_image("RUST_BOT_BACKGROUND_FILE", "/photo_strip_background.jpg"));
