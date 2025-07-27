@@ -15,10 +15,7 @@ jobs:
         with:
           node-version: 20
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      - uses: dtolnay/rust-toolchain@stable
 
       - name: Lint Backend
         run: |
