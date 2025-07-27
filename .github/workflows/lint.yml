@@ -1,4 +1,4 @@
-name: Continuous Integration Jobs
+name: Lint
 
 on:
   push:
