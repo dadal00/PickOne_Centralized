@@ -150,6 +150,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV}
       - PORT=${SVELTE_PORT}
+      - PUBLIC_MEILI_KEY=${PUBLIC_MEILI_KEY}
 
   caddy:
     image: main_caddy:latest

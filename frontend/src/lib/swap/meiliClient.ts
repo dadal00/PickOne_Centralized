@@ -1,4 +1,5 @@
-import { PUBLIC_MEILI_URL, PUBLIC_MEILI_KEY, PUBLIC_PAGE_SIZE } from '$env/static/public'
+import { PUBLIC_MEILI_URL, PUBLIC_PAGE_SIZE } from '$env/static/public'
+import { env } from '$env/dynamic/public'
 import { Meilisearch } from 'meilisearch'
 import {
 	ItemFields,
@@ -12,7 +13,7 @@ import { appState } from './AppState.svelte'
 
 const client = new Meilisearch({
 	host: PUBLIC_MEILI_URL,
-	apiKey: PUBLIC_MEILI_KEY,
+	apiKey: env.PUBLIC_MEILI_KEY,
 	requestInit: {
 		credentials: 'include'
 	}
