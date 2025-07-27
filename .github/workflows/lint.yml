@@ -1,0 +1,32 @@
+name: Lint
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Lint Backend
+        run: |
+          cd backend
+          cargo fmt --all -- --check
+
+      - name: Lint Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run lint
