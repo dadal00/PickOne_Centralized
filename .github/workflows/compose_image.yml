@@ -40,8 +40,6 @@ jobs:
           sudo apt-get update && sudo apt-get install -y gettext
 
           for i in $(seq 1 $RUNS); do
-            cd deploy
-
             ENVFILE_VAR="ENV${i}"
             TAGVAR="TAG${i}"
             ENVFILE="${!ENVFILE_VAR}"
@@ -50,6 +48,8 @@ jobs:
             set -a
             source "$ENVFILE"
             set +a
+
+            cd deploy
             envsubst < docker-build.main.yml \
               | sudo docker compose -f - build
 
@@ -62,6 +62,6 @@ jobs:
               docker tag "$local_image" "$remote_image"
               docker push "$remote_image"
             done
-            
+
             cd ..
           done
