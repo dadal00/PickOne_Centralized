@@ -1,0 +1,48 @@
+name: Compose Docker Image
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: vars
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "tag=production" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and Push Docker Images
+        env:
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y gettext
+
+          set -a
+          source .env
+          set +a
+
+          cd deploy
+          envsubst < docker-build.main.yml | sudo docker compose -f - build
+
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          for service in rust svelte caddy; do
+            local_image="main_${service}:latest"
+            remote_image="ghcr.io/${{ github.repository_owner }}/pickone_${service}:$TAG"
+            docker tag "$local_image" "$remote_image"
+            docker push "$remote_image"
+          done
