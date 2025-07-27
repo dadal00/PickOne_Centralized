@@ -1,9 +1,8 @@
-name: Compose Docker Image
+name: Build Docker Image
 
 on:
   push:
-    branches:
-      - "**"
+    branches: ["**"]
 
 jobs:
   build:
@@ -15,34 +14,52 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set image tag
+      - name: Prepare Build
         id: vars
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "tag=production" >> "$GITHUB_OUTPUT"
+            echo "runs=1"      >> "$GITHUB_OUTPUT"
+            echo "env1=.env"   >> "$GITHUB_OUTPUT"
+            echo "tag1=production" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=dev" >> "$GITHUB_OUTPUT"
+            echo "runs=2"          >> "$GITHUB_OUTPUT"
+            echo "env1=.env"       >> "$GITHUB_OUTPUT"
+            echo "tag1=dev"        >> "$GITHUB_OUTPUT"
+            echo "env2=.env.local" >> "$GITHUB_OUTPUT"
+            echo "tag2=dev-local"  >> "$GITHUB_OUTPUT"
           fi
 
       - name: Build and Push Docker Images
         env:
-          TAG: ${{ steps.vars.outputs.tag }}
+          RUNS: ${{ steps.vars.outputs.runs }}
+          ENV1: ${{ steps.vars.outputs.env1 }}
+          TAG1: ${{ steps.vars.outputs.tag1 }}
+          ENV2: ${{ steps.vars.outputs.env2 }}
+          TAG2: ${{ steps.vars.outputs.tag2 }}
         run: |
           sudo apt-get update && sudo apt-get install -y gettext
 
-          set -a
-          source .env
-          set +a
-
           cd deploy
-          envsubst < docker-build.main.yml | sudo docker compose -f - build
 
-          echo "${{ secrets.GITHUB_TOKEN }}" \
-            | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          for i in $(seq 1 $RUNS); do
+            ENVFILE_VAR="ENV${i}"
+            TAGVAR="TAG${i}"
+            ENVFILE="${!ENVFILE_VAR}"
+            SUFFIX="${!TAGVAR}"
 
-          for service in rust svelte caddy; do
-            local_image="main_${service}:latest"
-            remote_image="ghcr.io/${{ github.repository_owner }}/pickone_${service}:$TAG"
-            docker tag "$local_image" "$remote_image"
-            docker push "$remote_image"
+            set -a
+            source "$ENVFILE"
+            set +a
+            envsubst < docker-build.main.yml \
+              | sudo docker compose -f - build
+
+            echo "${{ secrets.GITHUB_TOKEN }}" \
+              | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            for service in rust svelte caddy; do
+              local_image="main_${service}:latest"
+              remote_image="ghcr.io/${{ github.repository_owner }}/pickone_${service}:${SUFFIX}"
+              docker tag "$local_image" "$remote_image"
+              docker push "$remote_image"
+            done
           done
