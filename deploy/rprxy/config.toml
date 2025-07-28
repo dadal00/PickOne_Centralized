@@ -1,0 +1,128 @@
+########################################
+#                                      #
+#       rust-rxpy configuration        #
+#                                      #
+########################################
+###################################
+#         Global settings         #
+###################################
+# Both or either one of http/https ports must be specified
+listen_port = 80
+listen_port_tls = 443
+
+# Optional for h2 and http1.1
+tcp_listen_backlog = 4096
+
+# Optional for h2 and http1.1
+max_concurrent_streams = 256
+
+# Optional. Counted in total for http1.1, 2, 3
+max_clients = 4096
+
+###################################
+#         Backend settings        #
+###################################
+[apps]
+
+[apps.main]
+server_name = "${MAIN_DOMAIN}"
+tls = { https_redirection = true, acme = true }
+
+###################################
+#      Experimantal settings      #
+###################################
+
+# ACME settings. Unless specified, ACME is disabled.
+[experimental.acme]
+email = "${ACME_EMAIL}"
+
+######################################################################
+## Registering a backend app served by a domain name "localhost"
+[apps.localhost]
+server_name = 'localhost' # Domain name
+
+# Optional: TLS setting. if https_port is specified and tls is true above, this must be given.
+tls = { https_redirection = true, tls_cert_path = '/certs/server.crt', tls_cert_key_path = '/certs/server.key' } # for docker volume mounted certs
+#tls = { https_redirection = true, tls_cert_path = './server.crt', tls_cert_key_path = './server.key' }          # for local
+#tls = { https_redirection = true, tls_cert_path = './server.crt', tls_cert_key_path = './server.key', client_ca_cert_path = './client_cert.ca.crt' }          # for local with client_cert
+
+## TODO
+# allowhosts = ['127.0.0.1', '::1', '192.168.10.0/24'] # TODO
+# denyhosts = ['*'] # TODO
+
+# default destination if "path" is not specified
+[[apps.localhost.reverse_proxy]]
+# List of destinations to send data to. At this point, round-robin is used for load-balancing if multiple URLs are specified.
+upstream = [
+  { location = 'www.yahoo.com', tls = true },
+  { location = 'www.yahoo.co.jp', tls = true },
+]
+
+upstream_options = [
+  "keep_original_host",   # [default] do not overwrite HOST value with upstream hostname (like 192.168.xx.x seen from rpxy), which is prior to "set_upstream_host" if both are specified.
+  "force_http2_upstream", # mutually exclusive with "force_http11_upstream"
+]
+
+# Non-default destination in "localhost" app, which is routed by "path"
+[[apps.localhost.reverse_proxy]]
+path = '/maps'
+# For request path starting with "/maps",
+# this configuration results that any path like "/maps/org/any.ext" is mapped to "/replacing/path1/org/any.ext"
+# by replacing "/maps" with "/replacing/path1" for routing to the locations given in upstream array
+# Note that unless "replace_path" is specified, the "path" is always preserved.
+# "replace_path" must be start from "/" (root path)
+replace_path = "/replacing/path1"
+upstream = [
+  { location = 'www.bing.com', tls = true },
+  { location = 'www.bing.co.jp', tls = true },
+]
+
+upstream_options = [
+  "upgrade_insecure_requests",
+  "force_http11_upstream",
+  "set_upstream_host",        # overwrite HOST value with upstream hostname (like www.yahoo.com)
+  "forwarded_header"          # add Forwarded header (by default, this is not added. However, if the incoming request has Forwarded header, it would be preserved and updated)
+]
+######################################################################
+
+######################################################################
+# Another application backend servied by different domain name
+[apps.another_localhost]
+server_name = 'localhost.localdomain'
+reverse_proxy = [{ upstream = [{ location = 'www.google.com', tls = true }] }]
+######################################################################
+
+######################################################################
+# ACME enabled example. ACME will be used to get a certificate for the server_name with ACME tls-alpn-01 protocol.
+# Note that acme option must be specified in the experimental section.
+[apps.localhost_with_acme]
+server_name = 'kubernetes.docker.internal'
+reverse_proxy = [{ upstream = [{ location = 'example.com', tls = true }] }]
+tls = { https_redirection = true, acme = true }
+
+###################################
+#      Experimantal settings      #
+###################################
+
+# If this specified, h3 is enabled
+[experimental.h3]
+alt_svc_max_age = 3600             # sec
+request_max_body_size = 65536      # bytes
+max_concurrent_connections = 10000
+max_concurrent_bidistream = 100
+max_concurrent_unistream = 100
+max_idle_timeout = 10              # secs. 0 represents an infinite timeout.
+# WARNING: If a peer or its network path malfunctions or acts maliciously, an infinite idle timeout can result in permanently hung futures!
+
+# If this specified, file cache feature is enabled
+[experimental.cache]
+cache_dir = './cache'                # optional. default is "./cache" relative to the current working directory
+max_cache_entry = 1000               # optional. default is 1k
+max_cache_each_size = 65535          # optional. default is 64k
+max_cache_each_size_on_memory = 4096 # optional. default is 4k if 0, it is always file cache.
+
+# ACME settings. Unless specified, ACME is disabled.
+[experimental.acme]
+dir_url = "https://localhost:14000/dir" # optional. default is "https://acme-v02.api.letsencrypt.org/directory"
+email = "test@example.com"
+registry_path = "./acme_registry"       # optional. default is "./acme_registry" relative to the current working directory
