@@ -115,17 +115,6 @@ export type RatingsBrokenDown = {
 	[RatingCategory.COMMUNITY]: number // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
 }
 
-export type Amenity =
-	| 'Study Lounges'
-	| '24/7 Front Desk'
-	| 'Community Kitchen'
-	| 'Lounge Areas'
-	| 'In-Hall Dining Court'
-	| 'Fitness Room'
-	| 'Study Rooms'
-	| 'Vending Areas'
-	| 'Private Bathrooms'
-
 export type CostSymbol = '$' | '$$' | '$$$'
 
 export type SemesterSeason = 'Fall' | 'Spring' | 'Summer'
@@ -160,7 +149,6 @@ export const HousingFields = {
 	COST_MIN: 'cost_min',
 	COST_MAX: 'cost_max',
 	ADDRESS: 'address',
-	AMENITIES: 'amenities',
 	COST_SYMBOL: 'cost_symbol'
 } as const
 
@@ -176,5 +164,4 @@ export type Housing = {
 	[HousingFields.COST_MAX]: number // 1-255 => 1k - 255k per year
 	[HousingFields.COST_SYMBOL]: CostSymbol
 	[HousingFields.ADDRESS]: string
-	[HousingFields.AMENITIES]: Amenity[]
 }
