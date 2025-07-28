@@ -1,23 +1,21 @@
 use crate::{
-    api::{
-        bot::{chat::start_bot, photo::photo_handler},
-        microservices::{
-            cdc::{RedisCDCParams, ScyllaCDCParams, start_cdc},
-            database::schema::{BOILER_SWAP_KEYSPACE, columns::boiler_swap::items, tables},
-        },
-        web::{
-            handlers::{
-                api_token_check, authenticate_handler, delete_handler, forgot_handler,
-                resend_handler, verify_handler, visitors_handler,
-            },
-            models::{METRICS_ROUTE, RedisAction, WebsitePath, WebsiteRoute},
-            swap::handlers::post_item_handler,
-        },
-    },
+    bot::{chat::start_bot, photo::photo_handler},
     error::AppError,
     metrics::{RedisMetricAction, metrics_handler},
+    microservices::{
+        cdc::{RedisCDCParams, ScyllaCDCParams, start_cdc},
+        database::schema::{BOILER_SWAP_KEYSPACE, columns::boiler_swap::items, tables},
+    },
     signals::shutdown_signal,
     state::AppState,
+    web::{
+        handlers::{
+            api_token_check, authenticate_handler, delete_handler, forgot_handler, resend_handler,
+            verify_handler, visitors_handler,
+        },
+        models::{METRICS_ROUTE, RedisAction, WebsitePath, WebsiteRoute},
+        swap::handlers::post_item_handler,
+    },
 };
 use axum::{
     Router,
@@ -31,12 +29,14 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
 
-mod api;
+mod bot;
 mod config;
 mod error;
 mod metrics;
+mod microservices;
 mod signals;
 mod state;
+mod web;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {

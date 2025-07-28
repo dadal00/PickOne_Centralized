@@ -3,7 +3,7 @@ use super::{
     photo::{download_photo, process_photos},
     redis::get_num_photos,
 };
-use crate::{AppError, AppState, api::microservices::redis::remove_id};
+use crate::{AppError, AppState, microservices::redis::remove_id};
 use std::sync::Arc;
 use teloxide::{prelude::*, types::FileMeta};
 

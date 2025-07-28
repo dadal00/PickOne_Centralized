@@ -1,9 +1,9 @@
 use super::meilisearch::add_items;
 use crate::{
     AppError, AppState, WebsitePath,
-    api::web::swap::cdc::{convert_cdc_item, handle_item_deletion},
     metrics::{decr_metric, incr_metric},
     tables,
+    web::swap::cdc::{convert_cdc_item, handle_item_deletion},
 };
 use anyhow::{Error as anyhowError, Result as anyResult};
 use async_trait::async_trait;

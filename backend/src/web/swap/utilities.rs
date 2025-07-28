@@ -1,5 +1,5 @@
 use super::models::ItemPayload;
-use crate::{AppError, api::web::verify::validate_length};
+use crate::{AppError, web::verify::validate_length};
 use rustrict::CensorStr;
 
 pub fn check_item(payload: &ItemPayload) -> Result<(), AppError> {

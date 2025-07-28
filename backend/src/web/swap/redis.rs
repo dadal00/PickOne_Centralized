@@ -1,10 +1,8 @@
 use super::{database::insert_item, models::ItemPayload};
 use crate::{
     AppError, AppState, RedisAction, WebsitePath,
-    api::{
-        microservices::redis::insert_id,
-        web::locks::{increment_lock_key, is_redis_locked},
-    },
+    microservices::redis::insert_id,
+    web::locks::{increment_lock_key, is_redis_locked},
 };
 use once_cell::sync::Lazy;
 use redis::{Script, aio::ConnectionManager};

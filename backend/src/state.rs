@@ -1,18 +1,16 @@
 use crate::{
     AppError,
-    api::{
-        microservices::{
-            database::init::{DatabaseQueries, init_database},
-            meilisearch::init_meilisearch,
-            redis::init_redis,
-        },
-        web::{
-            models::{RedisAction, WebsitePath},
-            swap::cdc::{expire_ttl, spawn_ttl_task},
-        },
-    },
     config::Config,
     metrics::{RedisMetricAction, set_redis_metric},
+    microservices::{
+        database::init::{DatabaseQueries, init_database},
+        meilisearch::init_meilisearch,
+        redis::init_redis,
+    },
+    web::{
+        models::{RedisAction, WebsitePath},
+        swap::cdc::{expire_ttl, spawn_ttl_task},
+    },
 };
 use meilisearch_sdk::client::Client;
 use redis::aio::ConnectionManager;

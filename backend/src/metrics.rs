@@ -1,9 +1,7 @@
 use crate::{
     AppError, AppState,
-    api::{
-        microservices::redis::try_get,
-        web::models::{RedisAction, VisitorPayload, WebsitePath},
-    },
+    microservices::redis::try_get,
+    web::models::{RedisAction, VisitorPayload, WebsitePath},
 };
 use axum::{Json, extract::State};
 use once_cell::sync::Lazy;

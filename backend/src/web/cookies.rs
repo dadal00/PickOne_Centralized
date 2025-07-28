@@ -2,7 +2,7 @@ use super::{
     models::{RedisAction, WebsitePath},
     utilities::get_website_path,
 };
-use crate::{AppError, AppState, api::microservices::redis::remove_id};
+use crate::{AppError, AppState, microservices::redis::remove_id};
 use axum::http::{
     HeaderValue,
     header::{HeaderMap, SET_COOKIE},

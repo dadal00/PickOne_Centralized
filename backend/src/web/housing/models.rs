@@ -2,6 +2,7 @@ use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use strum_macros::{AsRefStr, EnumString};
+use uuid::Uuid;
 
 #[derive(Serialize)]
 pub struct Housing {
@@ -16,12 +17,12 @@ pub struct Housing {
     pub cost_max: u8,       // 1-255 => 1k - 255k per year
     pub cost_symbol: Option<CostSymbol>,
     pub address: String,
-    pub amenities: HashSet<Amenity>,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct ReviewPayload {
     pub id: HousingID,
+    pub database_id: Option<Uuid>,
     pub overall_rating: u16, // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
     pub ratings: RatingsBrokenDown, // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
     pub semester_season: SemesterSeason,
@@ -54,36 +55,6 @@ pub enum SemesterSeason {
 
     #[strum(serialize = "Summer")]
     Summer = 2,
-}
-
-#[derive(EnumString, AsRefStr, PartialEq, Clone, Serialize)]
-pub enum Amenity {
-    #[strum(serialize = "Study Lounges")]
-    StudyLounges,
-
-    #[strum(serialize = "24/7 Front Desk")]
-    FrontDesk,
-
-    #[strum(serialize = "Community Kitchen")]
-    CommunityKitchen,
-
-    #[strum(serialize = "Lounge Areas")]
-    LoungeAreas,
-
-    #[strum(serialize = "In-Hall Dining Court")]
-    InHallDiningCourt,
-
-    #[strum(serialize = "Fitness Room")]
-    FitnessRoom,
-
-    #[strum(serialize = "Study Rooms")]
-    StudyRooms,
-
-    #[strum(serialize = "Vending Areas")]
-    VendingAreas,
-
-    #[strum(serialize = "Private Bathrooms")]
-    PrivateBathrooms,
 }
 
 #[derive(EnumString, AsRefStr, PartialEq, Clone, Serialize)]

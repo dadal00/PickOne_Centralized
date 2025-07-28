@@ -4,8 +4,8 @@ use super::database::{
 };
 use crate::{
     AppError,
-    api::{web::swap::database::convert_db_items, web::swap::models::ItemRow},
     config::{read_secret, try_load},
+    web::swap::{database::convert_db_items, models::ItemRow},
 };
 use anyhow::Result as anyResult;
 use meilisearch_sdk::{
