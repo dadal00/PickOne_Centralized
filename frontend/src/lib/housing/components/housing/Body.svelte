@@ -7,8 +7,6 @@
 	import Progress from '../templates/Progress.svelte'
 	import SearchComponent from '$lib/housing/components/search/Search.svelte'
 
-	const { housing } = $props()
-
 	let reviews = $derived(appState.getReviews(page.params.id))
 	let activeTabValue = $state('overview')
 
@@ -94,29 +92,6 @@
 									>
 									<span class="text-sm text-gray-500 dark:text-gray-400">/5</span>
 								</div>
-							</div>
-						{/each}
-					</div>
-				</CardPiece>
-			</CardPiece>
-			<CardPiece
-				className="bg-white/80 backdrop-blur-sm shadow-xl border border-gray-100 rounded-2xl dark:bg-gray-800/80 dark:border-gray-700"
-				cardPiece="cardCore"
-			>
-				<CardPiece cardPiece="cardHeader">
-					<CardPiece
-						cardPiece="cardTitle"
-						className="text-2xl font-bold text-gray-900 dark:text-gray-100">Amenities</CardPiece
-					>
-				</CardPiece>
-				<CardPiece cardPiece="cardContent">
-					<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-						{#each housing.amenities as amenity}
-							<div class="flex items-center space-x-3 p-3 rounded-xl">
-								<div
-									class="w-3 h-3 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full"
-								></div>
-								<span class="font-medium text-gray-800 dark:text-gray-200">{amenity}</span>
 							</div>
 						{/each}
 					</div>
