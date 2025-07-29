@@ -66,14 +66,12 @@ jobs:
             cd ..
           done
       - name: Run Trivy vulnerability scanner on production
-        env:
-          TAG1: ${{ steps.vars.outputs.tag1 }}
         uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: |
-            ghcr.io/${{ github.repository_owner }}/pickone_rust:${TAG1},
-            ghcr.io/${{ github.repository_owner }}/pickone_svelte:${TAG1},
-            ghcr.io/${{ github.repository_owner }}/pickone_caddy:${TAG1}
+            ghcr.io/${{ github.repository_owner }}/pickone_rust:${{ steps.vars.outputs.tag1 },
+            ghcr.io/${{ github.repository_owner }}/pickone_svelte:${{ steps.vars.outputs.tag1 },
+            ghcr.io/${{ github.repository_owner }}/pickone_caddy:${{ steps.vars.outputs.tag1 }
           format: table
           exit-code: 1
           ignore-unfixed: true
