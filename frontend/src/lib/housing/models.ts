@@ -1,89 +1,6 @@
-export type HousingID =
-	// On Campus
-	| 'cary-quad'
-	| 'mc-cutcheon'
-	| 'tarkington'
-	| 'wiley'
-	| 'owen'
-	| 'shreve'
-	| 'earhart'
-	| 'harrison'
-	| 'hillenbrand'
-	| 'meredith'
-	| 'meredith-south'
-	| 'windsor'
-	| 'first-street'
-	| 'hilltop'
-	| 'winifred'
-	| 'frieda'
-	| 'hawkins'
-	| 'fuse'
-	| 'aspire'
-	| '3rd-and-west'
-	| 'benchmark-ii'
-	| 'grant-333'
-	| 'provenance'
-	| 'russell-414'
-	| 'steely-410'
-	| 'waldron-125'
-	| 'waldron-19'
-	| 'waldron-square'
-	| 'honors-college-residences'
+export type ThumbsDeltaMap = Record<string, ThumbsDelta>;
 
-	// Off Campus
-	| 'hub'
-	| 'rise'
-	| 'chauncey'
-	| 'lark'
-	| 'allight'
-	| 'redpoint'
-	| 'verve'
-	| 'river'
-	| 'morris'
-
-export const HousingNameLabels: Record<HousingID, string> = {
-	// On-Campus
-	'cary-quad': 'Cary Quadrangle',
-	'mc-cutcheon': 'McCutcheon Hall',
-	tarkington: 'Tarkington Hall',
-	wiley: 'Wiley Hall',
-	owen: 'Owen Hall',
-	shreve: 'Shreve Hall',
-	earhart: 'Earhart Hall',
-	harrison: 'Harrison Hall',
-	hillenbrand: 'Hillenbrand Hall',
-	meredith: 'Meredith Hall',
-	'meredith-south': 'Meredith South',
-	windsor: 'Windsor Halls',
-	'first-street': 'First Street Towers',
-	hilltop: 'Hilltop Apartments',
-	winifred: 'Winifred Parker Hall',
-	frieda: 'Frieda Parker Hall',
-	hawkins: 'Hawkins Hall',
-	fuse: 'Fuse Apartments',
-	aspire: 'Aspire at Discovery Park',
-	'3rd-and-west': '3rd and West',
-	'benchmark-ii': 'Benchmark II',
-	'grant-333': 'Grant Street Station 333',
-	provenance: 'Provenance Apartments',
-	'russell-414': '414 Russell Street',
-	'steely-410': '410 Steely Street',
-	'waldron-125': '125 Waldron Street',
-	'waldron-19': '19 Waldron Street',
-	'waldron-square': 'Waldron Square',
-	'honors-college-residences': 'Honors College Residences',
-
-	// Off-Campus
-	hub: 'Hub on Campus',
-	rise: 'Rise on Chauncey',
-	chauncey: 'Chauncey Square Apartments',
-	lark: 'Lark West Lafayette',
-	allight: 'Alight West Lafayette',
-	redpoint: 'Redpoint West Lafayette',
-	verve: 'Verve West Lafayette',
-	river: 'River Market Apartments',
-	morris: 'Morris Rentals'
-}
+export type ThumbsDelta = 'up' | 'down'
 
 export type HousingType = 'Dorm' | 'Apartment'
 export type CampusType = 'On-Campus' | 'Off-Campus'
@@ -175,4 +92,91 @@ export type Housing = {
 	[HousingFields.COST_MAX]: number
 	[HousingFields.COST_SYMBOL]: CostSymbol
 	[HousingFields.ADDRESS]: string
+}
+
+export type HousingID =
+	// On Campus
+	| 'cary-quad'
+	| 'mc-cutcheon'
+	| 'tarkington'
+	| 'wiley'
+	| 'owen'
+	| 'shreve'
+	| 'earhart'
+	| 'harrison'
+	| 'hillenbrand'
+	| 'meredith'
+	| 'meredith-south'
+	| 'windsor'
+	| 'first-street'
+	| 'hilltop'
+	| 'winifred'
+	| 'frieda'
+	| 'hawkins'
+	| 'fuse'
+	| 'aspire'
+	| '3rd-and-west'
+	| 'benchmark-ii'
+	| 'grant-333'
+	| 'provenance'
+	| 'russell-414'
+	| 'steely-410'
+	| 'waldron-125'
+	| 'waldron-19'
+	| 'waldron-square'
+	| 'honors-college-residences'
+
+	// Off Campus
+	| 'hub'
+	| 'rise'
+	| 'chauncey'
+	| 'lark'
+	| 'allight'
+	| 'redpoint'
+	| 'verve'
+	| 'river'
+	| 'morris'
+
+export const HousingNameLabels: Record<HousingID, string> = {
+	// On-Campus
+	'cary-quad': 'Cary Quadrangle',
+	'mc-cutcheon': 'McCutcheon Hall',
+	tarkington: 'Tarkington Hall',
+	wiley: 'Wiley Hall',
+	owen: 'Owen Hall',
+	shreve: 'Shreve Hall',
+	earhart: 'Earhart Hall',
+	harrison: 'Harrison Hall',
+	hillenbrand: 'Hillenbrand Hall',
+	meredith: 'Meredith Hall',
+	'meredith-south': 'Meredith South',
+	windsor: 'Windsor Halls',
+	'first-street': 'First Street Towers',
+	hilltop: 'Hilltop Apartments',
+	winifred: 'Winifred Parker Hall',
+	frieda: 'Frieda Parker Hall',
+	hawkins: 'Hawkins Hall',
+	fuse: 'Fuse Apartments',
+	aspire: 'Aspire at Discovery Park',
+	'3rd-and-west': '3rd and West',
+	'benchmark-ii': 'Benchmark II',
+	'grant-333': 'Grant Street Station 333',
+	provenance: 'Provenance Apartments',
+	'russell-414': '414 Russell Street',
+	'steely-410': '410 Steely Street',
+	'waldron-125': '125 Waldron Street',
+	'waldron-19': '19 Waldron Street',
+	'waldron-square': 'Waldron Square',
+	'honors-college-residences': 'Honors College Residences',
+
+	// Off-Campus
+	hub: 'Hub on Campus',
+	rise: 'Rise on Chauncey',
+	chauncey: 'Chauncey Square Apartments',
+	lark: 'Lark West Lafayette',
+	allight: 'Alight West Lafayette',
+	redpoint: 'Redpoint West Lafayette',
+	verve: 'Verve West Lafayette',
+	river: 'River Market Apartments',
+	morris: 'Morris Rentals'
 }

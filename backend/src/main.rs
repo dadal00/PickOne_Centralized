@@ -2,7 +2,7 @@ use crate::{
     bot::{chat::start_bot, photo::photo_handler},
     error::AppError,
     metrics::metrics_handler,
-    microservices::cdc::{RedisCDCParams, ScyllaCDCParams, start_cdc},
+    microservices::cdc::core::{ScyllaCDCParams, start_cdc},
     signals::shutdown_signal,
     state::AppState,
     web::{
@@ -10,9 +10,12 @@ use crate::{
             api_token_check, authenticate_handler, delete_handler, forgot_handler, resend_handler,
             verify_handler,
         },
+        housing::{
+            cdc::start_housing_cdc,
+            handlers::{post_review_handler, update_thumbs_handler},
+        },
         models::{METRICS_ROUTE, RedisAction, WebsitePath, WebsiteRoute},
-        swap,
-        swap::{handlers::post_item_handler, schema::columns::items},
+        swap::{cdc::start_swap_cdc, handlers::post_item_handler},
     },
 };
 use axum::{
@@ -119,6 +122,22 @@ async fn main() -> Result<(), AppError> {
             post(resend_handler),
         )
         .route(
+            &format!(
+                "/{}/{}/post-review",
+                WebsitePath::Housing.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+            ),
+            post(post_review_handler),
+        )
+        .route(
+            &format!(
+                "/{}/{}/update-thumbs",
+                WebsitePath::Housing.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+            ),
+            post(update_thumbs_handler),
+        )
+        .route(
             &format!("/{}/:id", WebsitePath::Photos.as_ref()),
             get(photo_handler),
         )
@@ -139,20 +158,8 @@ async fn main() -> Result<(), AppError> {
     meili_swap_future.await??;
     meili_housing_future.await??;
 
-    let (mut cdc_reader, cdc_future) = start_cdc(
-        state.clone(),
-        ScyllaCDCParams {
-            keyspace: swap::schema::KEYSPACE.to_string(),
-            table: swap::schema::tables::ITEMS.to_string(),
-            id_name: items::ITEM_ID.to_string(),
-        },
-        WebsitePath::BoilerSwap,
-        RedisCDCParams {
-            deletion_name: RedisAction::DeletedItem.as_ref().to_string(),
-        },
-        swap::schema::tables::ITEMS_CDC,
-    )
-    .await?;
+    let (mut swap_cdc_reader, swap_cdc_future) = start_swap_cdc(state.clone()).await?;
+    let (mut housing_cdc_reader, housing_cdc_future) = start_housing_cdc(state).await?;
 
     info!("Server running on {}", addr);
 
@@ -160,7 +167,9 @@ async fn main() -> Result<(), AppError> {
         .with_graceful_shutdown(shutdown_signal())
         .await?;
 
-    cdc_reader.stop();
+    housing_cdc_reader.stop();
+    swap_cdc_reader.stop();
 
-    Ok(cdc_future.await?)
+    housing_cdc_future.await?;
+    Ok(swap_cdc_future.await?)
 }

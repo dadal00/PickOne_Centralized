@@ -1,21 +1,26 @@
 use super::{
     models::{Condition, CronItem, CronItemRow, Emoji, Item, ItemType, Location},
     redis::decrement_items,
-    schema::columns::items,
+    schema::{KEYSPACE, columns::items, tables},
 };
 use crate::{
-    AppError, AppState, RedisAction,
+    AppError, AppState, RedisAction, ScyllaCDCParams, WebsitePath,
     microservices::{
-        cdc::{get_cdc_date, get_cdc_id, get_cdc_text, get_cdc_u8},
+        cdc::{
+            core::RedisCDCParams,
+            utilities::{get_cdc_date, get_cdc_id, get_cdc_text, get_cdc_u8},
+        },
         database::DatabaseQueries,
         meilisearch::delete_item,
         redis::{remove_id, try_get},
     },
+    start_cdc,
 };
-use anyhow::Result as anyResult;
+use anyhow::{Error as anyhowError, Result as anyResult};
 use chrono::Utc;
+use futures_util::future::RemoteHandle;
 use scylla::{client::session::Session, response::PagingState, statement::batch::Batch};
-use scylla_cdc::consumer::CDCRow;
+use scylla_cdc::{consumer::CDCRow, log_reader::CDCLogReader};
 use std::{ops::ControlFlow, sync::Arc};
 use tokio_cron_scheduler::{Job, JobScheduler};
 use tracing::warn;
@@ -176,4 +181,23 @@ pub async fn handle_item_deletion(
     .await?;
 
     Ok(())
+}
+
+pub async fn start_swap_cdc(
+    state: Arc<AppState>,
+) -> Result<(CDCLogReader, RemoteHandle<Result<(), anyhowError>>), AppError> {
+    start_cdc(
+        state.clone(),
+        ScyllaCDCParams {
+            keyspace: KEYSPACE.to_string(),
+            table: tables::ITEMS.to_string(),
+            id_name: items::ITEM_ID.to_string(),
+        },
+        WebsitePath::BoilerSwap,
+        Some(RedisCDCParams {
+            deletion_name: RedisAction::DeletedItem.as_ref().to_string(),
+        }),
+        tables::ITEMS_CDC,
+    )
+    .await
 }

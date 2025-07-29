@@ -60,11 +60,12 @@ pub mod columns {
         pub const DESCRIPTION_TYPE: &str = "text";
 
         pub const THUMBS_UP: &str = "thumbs_up";
-        pub const THUMBS_UP_TYPE: &str = "int";
+        pub const THUMBS_UP_TYPE: &str = "counter";
 
         pub const THUMBS_DOWN: &str = "thumbs_down";
-        pub const THUMBS_DOWN_TYPE: &str = "int";
+        pub const THUMBS_DOWN_TYPE: &str = "counter";
 
         pub const PRIMARY_KEY: &str = REVIEW_ID;
+        pub const CLUSTER_KEY: &str = HOUSING_ID;
     }
 }

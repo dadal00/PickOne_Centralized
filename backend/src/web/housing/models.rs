@@ -1,7 +1,33 @@
 use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use strum_macros::{AsRefStr, EnumString};
 use uuid::Uuid;
+
+#[derive(Serialize, Deserialize)]
+pub struct ThumbsPayload {
+    pub id: Uuid,
+    pub housing_id: String,
+    pub thumbs_up: u64,
+    pub thumbs_down: u64,
+}
+
+pub type ThumbsDeltaMap = HashMap<Uuid, ThumbsDeltaEntry>;
+
+#[derive(Deserialize)]
+pub struct ThumbsDeltaEntry {
+    pub housing_id: HousingID,
+    pub delta: ThumbsDelta,
+}
+
+#[derive(EnumString, AsRefStr, PartialEq, Clone, Deserialize)]
+pub enum ThumbsDelta {
+    #[strum(serialize = "up")]
+    Up,
+
+    #[strum(serialize = "down")]
+    Down,
+}
 
 pub type ReviewRow<'a> = (
     Uuid,
@@ -15,8 +41,8 @@ pub type ReviewRow<'a> = (
     i8,
     i8,
     &'a str,
-    i32,
-    i32,
+    i64,
+    i64,
 );
 
 #[derive(Serialize, Deserialize)]
@@ -70,8 +96,6 @@ pub struct ReviewPayload {
     // year <= 255 + 2000
     pub semester_year: u8,
     pub description: String,
-    pub thumbs_up: u32,
-    pub thumbs_down: u32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -86,8 +110,8 @@ pub struct Review {
     // year <= 255 + 2000
     pub semester_year: u8,
     pub description: String,
-    pub thumbs_up: u32,
-    pub thumbs_down: u32,
+    pub thumbs_up: u64,
+    pub thumbs_down: u64,
 }
 
 #[derive(EnumString, AsRefStr, PartialEq, Clone, Serialize, Deserialize)]

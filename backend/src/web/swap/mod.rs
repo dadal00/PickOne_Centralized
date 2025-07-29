@@ -5,4 +5,4 @@ pub mod init;
 pub mod models;
 pub mod redis;
 pub mod schema;
-pub mod utilities;
+pub mod verify;

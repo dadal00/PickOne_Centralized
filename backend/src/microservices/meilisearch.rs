@@ -75,6 +75,25 @@ pub async fn delete_item(meili_client: Arc<Client>, index_name: &str, key: Uuid)
     Ok(())
 }
 
+pub async fn update_items<T>(
+    meili_client: Arc<Client>,
+    index_name: &str,
+    items: &[T],
+    id_name: &str,
+) -> anyResult<()>
+where
+    T: Serialize + Send + Sync,
+{
+    meili_client
+        .index(index_name)
+        .add_or_update(items, Some(id_name))
+        .await?
+        .wait_for_completion(&meili_client, None, None)
+        .await?;
+
+    Ok(())
+}
+
 pub async fn clear_index(meili_client: Arc<Client>, index_name: &str) -> anyResult<()> {
     meili_client
         .index(index_name)
