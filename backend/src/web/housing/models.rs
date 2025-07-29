@@ -1,32 +1,90 @@
 use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use strum_macros::{AsRefStr, EnumString};
 use uuid::Uuid;
 
-#[derive(Serialize)]
-pub struct Housing {
+pub type ReviewRow<'a> = (
+    Uuid,
+    i8,
+    i16,
+    i16,
+    i16,
+    i16,
+    i16,
+    i16,
+    i8,
+    i8,
+    &'a str,
+    i32,
+    i32,
+);
+
+#[derive(Serialize, Deserialize)]
+pub struct HousingPayload {
     pub id: HousingID,
-    pub overall_rating: u16,        // 1-500 => /100 => 0.00 - 5.00
-    pub ratings: RatingsBrokenDown, // 1-500 => /100 => 0.00 - 5.00
+    // 1-500 => /100 => 0.00 - 5.00
+    pub overall_rating: u16,
+    // 1-500 => /100 => 0.00 - 5.00
+    pub ratings: RatingsBrokenDown,
     pub review_count: u32,
     pub housing_type: HousingType,
     pub campus_type: CampusType,
-    pub walk_time_mins: u8, // mins <= 255
-    pub cost_min: u8,       // 1-255 => 1k - 255k per year
-    pub cost_max: u8,       // 1-255 => 1k - 255k per year
+    // mins <= 255
+    pub walk_time_mins: u8,
+    // 1-255 => 1k - 255k per year
+    pub cost_min: u8,
+    // 1-255 => 1k - 255k per year
+    pub cost_max: u8,
     pub cost_symbol: Option<CostSymbol>,
     pub address: String,
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct Housing {
+    pub id: String,
+    // 1-500 => /100 => 0.00 - 5.00
+    pub overall_rating: u16,
+    // 1-500 => /100 => 0.00 - 5.00
+    pub ratings: RatingsBrokenDown,
+    pub review_count: u32,
+    pub housing_type: String,
+    pub campus_type: String,
+    // mins <= 255
+    pub walk_time_mins: u8,
+    // 1-255 => 1k - 255k per year
+    pub cost_min: u8,
+    // 1-255 => 1k - 255k per year
+    pub cost_max: u8,
+    pub cost_symbol: String,
+    pub address: String,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct ReviewPayload {
-    pub id: HousingID,
-    pub database_id: Option<Uuid>,
-    pub overall_rating: u16, // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
-    pub ratings: RatingsBrokenDown, // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
+    pub housing_id: HousingID,
+    // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
+    pub overall_rating: u16,
+    // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
+    pub ratings: RatingsBrokenDown,
     pub semester_season: SemesterSeason,
-    pub semester_year: u8, // year <= 255 + 2000
+    // year <= 255 + 2000
+    pub semester_year: u8,
+    pub description: String,
+    pub thumbs_up: u32,
+    pub thumbs_down: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Review {
+    pub id: Uuid,
+    pub housing_id: String,
+    // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
+    pub overall_rating: u16,
+    // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
+    pub ratings: RatingsBrokenDown,
+    pub semester_season: String,
+    // year <= 255 + 2000
+    pub semester_year: u8,
     pub description: String,
     pub thumbs_up: u32,
     pub thumbs_down: u32,
@@ -44,7 +102,7 @@ pub enum CostSymbol {
     Expensive,
 }
 
-#[derive(EnumString, AsRefStr, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(EnumString, TryFromPrimitive, AsRefStr, PartialEq, Clone, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum SemesterSeason {
     #[strum(serialize = "Fall")]
@@ -57,7 +115,7 @@ pub enum SemesterSeason {
     Summer = 2,
 }
 
-#[derive(EnumString, AsRefStr, PartialEq, Clone, Serialize)]
+#[derive(EnumString, AsRefStr, PartialEq, Clone, Serialize, Deserialize)]
 pub enum CampusType {
     #[strum(serialize = "On-Campus")]
     OnCampus,
@@ -66,7 +124,7 @@ pub enum CampusType {
     OffCampus,
 }
 
-#[derive(EnumString, AsRefStr, PartialEq, Clone, Serialize)]
+#[derive(EnumString, AsRefStr, PartialEq, Clone, Serialize, Deserialize)]
 pub enum HousingType {
     #[strum(serialize = "Dorm")]
     Dorm,
@@ -75,16 +133,35 @@ pub enum HousingType {
     Apartment,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct RatingsBrokenDown {
-    pub living_conditions: u16, // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
-    pub location: u16, // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
-    pub amenities: u16, // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
-    pub value: u16,    // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
-    pub community: u16, // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
+    // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
+    pub living_conditions: u16,
+    pub location: u16,
+    pub amenities: u16,
+    pub value: u16,
+    pub community: u16,
 }
 
-#[derive(EnumString, TryFromPrimitive, AsRefStr, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Default)]
+pub struct WeightedRatings {
+    pub living_conditions: f64,
+    pub location: f64,
+    pub amenities: f64,
+    pub value: f64,
+    pub community: f64,
+}
+
+#[derive(Default)]
+pub struct WeightedHousingRatings {
+    pub count: u32,
+    pub weighted_overall: f64,
+    pub weighted_ratings: WeightedRatings,
+}
+
+#[derive(
+    EnumString, TryFromPrimitive, AsRefStr, PartialEq, Clone, Serialize, Deserialize, Eq, Hash,
+)]
 #[repr(u8)]
 pub enum HousingID {
     // On Campus
@@ -202,4 +279,56 @@ pub enum HousingID {
 
     #[strum(serialize = "morris")]
     Morris = 28,
+}
+
+// Search indexes are named by HousingID
+// User search are matches by HousingLabels
+impl HousingID {
+    pub fn display_name(&self) -> &'static str {
+        match self.as_ref() {
+            // On Campus
+            "cary-quad" => "Cary Quadrangle",
+            "mc-cutcheon" => "McCutcheon Hall",
+            "tarkington" => "Tarkington Hall",
+            "wiley" => "Wiley Hall",
+            "owen" => "Owen Hall",
+            "shreve" => "Shreve Hall",
+            "earhart" => "Earhart Hall",
+            "harrison" => "Harrison Hall",
+            "hillenbrand" => "Hillenbrand Hall",
+            "meredith" => "Meredith Hall",
+            "meredith-south" => "Meredith South",
+            "windsor" => "Windsor Halls",
+            "first-street" => "First Street Towers",
+            "hilltop" => "Hilltop Apartments",
+            "winifred" => "Winifred Parker Hall",
+            "frieda" => "Frieda Parker Hall",
+            "hawkins" => "Hawkins Hall",
+            "fuse" => "Fuse Apartments",
+            "aspire" => "Aspire at Discovery Park",
+            "3rd-and-west" => "3rd and West",
+            "benchmark-ii" => "Benchmark II",
+            "grant-333" => "Grant Street Station 333",
+            "provenance" => "Provenance Apartments",
+            "russell-414" => "414 Russell Street",
+            "steely-410" => "410 Steely Street",
+            "waldron-125" => "125 Waldron Street",
+            "waldron-19" => "19 Waldron Street",
+            "waldron-square" => "Waldron Square",
+            "honors-college-residences" => "Honors College Residences",
+
+            // Off Campus
+            "hub" => "Hub on Campus",
+            "rise" => "Rise on Chauncey",
+            "chauncey" => "Chauncey Square Apartments",
+            "lark" => "Lark West Lafayette",
+            "allight" => "Alight West Lafayette",
+            "redpoint" => "Redpoint West Lafayette",
+            "verve" => "Verve West Lafayette",
+            "river" => "River Market Apartments",
+            "morris" => "Morris Rentals",
+
+            _ => panic!("Housing is misconfigured!"),
+        }
+    }
 }

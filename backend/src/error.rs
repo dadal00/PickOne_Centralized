@@ -22,6 +22,7 @@ use scylla::{
 };
 use serde_json::Error as serdeJsonError;
 use std::{env::VarError, io::Error as IOError, num::ParseIntError, string::FromUtf8Error};
+use strum::ParseError as strumError;
 use teloxide::RequestError as teloxideRequestError;
 use thiserror::Error;
 use tokio::task::JoinError;
@@ -110,6 +111,9 @@ pub enum AppError {
 
     #[error("Malformed payload: {0}")]
     BadRequest(String),
+
+    #[error("Strum error: {0}")]
+    Strum(#[from] strumError),
 }
 
 impl IntoResponse for AppError {

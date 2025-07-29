@@ -1,12 +1,13 @@
 use super::{
     models::{Condition, CronItem, CronItemRow, Emoji, Item, ItemType, Location},
     redis::decrement_items,
+    schema::columns::items,
 };
 use crate::{
     AppError, AppState, RedisAction,
     microservices::{
         cdc::{get_cdc_date, get_cdc_id, get_cdc_text, get_cdc_u8},
-        database::{init::DatabaseQueries, schema::columns::boiler_swap::items},
+        database::DatabaseQueries,
         meilisearch::delete_item,
         redis::{remove_id, try_get},
     },

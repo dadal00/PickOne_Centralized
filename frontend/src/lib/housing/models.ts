@@ -108,11 +108,12 @@ export const RatingCategoryLabels: Record<RatingCategoryValue, string> = {
 }
 
 export type RatingsBrokenDown = {
-	[RatingCategory.LIVING_CONDITIONS]: number // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
-	[RatingCategory.LOCATION]: number // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
-	[RatingCategory.AMENITIES]: number // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
-	[RatingCategory.VALUE]: number // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
-	[RatingCategory.COMMUNITY]: number // 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
+	// 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
+	[RatingCategory.LIVING_CONDITIONS]: number
+	[RatingCategory.LOCATION]: number
+	[RatingCategory.AMENITIES]: number
+	[RatingCategory.VALUE]: number
+	[RatingCategory.COMMUNITY]: number
 }
 
 export type CostSymbol = '$' | '$$' | '$$$'
@@ -120,6 +121,7 @@ export type CostSymbol = '$' | '$$' | '$$$'
 export type SemesterSeason = 'Fall' | 'Spring' | 'Summer'
 
 export const ReviewFields = {
+	HOUSING_ID: 'housing_id',
 	SEMESTER_SEASON: 'semester_season',
 	SEMESTER_YEAR: 'semester_year',
 	DESCRIPTION: 'description',
@@ -129,15 +131,21 @@ export const ReviewFields = {
 
 export type Review = {
 	[HousingFields.ID]?: string
-	[HousingFields.OVERALL_RATING]: number // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
-	[HousingFields.RATINGS]: RatingsBrokenDown // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
+	[ReviewFields.HOUSING_ID]: HousingID
+	// 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
+	[HousingFields.OVERALL_RATING]: number
+	// 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
+	[HousingFields.RATINGS]: RatingsBrokenDown
 	[ReviewFields.SEMESTER_SEASON]: SemesterSeason
-	[ReviewFields.SEMESTER_YEAR]: number // year <= 255 + 2000
+	// year <= 255 + 2000
+	[ReviewFields.SEMESTER_YEAR]: number
 	[ReviewFields.DESCRIPTION]: string
 	[ReviewFields.THUMBS_UP]: number
 	[ReviewFields.THUMBS_DOWN]: number
 }
 
+// Search indexes are named by HousingID
+// User search are matches by HousingLabels
 export const HousingFields = {
 	ID: 'id',
 	OVERALL_RATING: 'overall_rating',
@@ -153,15 +161,18 @@ export const HousingFields = {
 } as const
 
 export type Housing = {
-	[HousingFields.ID]: string
-	[HousingFields.OVERALL_RATING]: number // 1-500 => /100 => 0.00 - 5.00
+	[HousingFields.ID]: HousingID
+	// 1-500 => /100 => 0.00 - 5.00
+	[HousingFields.OVERALL_RATING]: number
 	[HousingFields.RATINGS]: RatingsBrokenDown
 	[HousingFields.REVIEW_COUNT]: number
 	[HousingFields.HOUSING_TYPE]: HousingType
 	[HousingFields.CAMPUS_TYPE]: CampusType
 	[HousingFields.WALK_TIME_MINS]: number
-	[HousingFields.COST_MIN]: number // 1-255 => 1k - 255k per year
-	[HousingFields.COST_MAX]: number // 1-255 => 1k - 255k per year
+	// 1-255 => 1k - 255k per year
+	[HousingFields.COST_MIN]: number
+	// 1-255 => 1k - 255k per year
+	[HousingFields.COST_MAX]: number
 	[HousingFields.COST_SYMBOL]: CostSymbol
 	[HousingFields.ADDRESS]: string
 }
