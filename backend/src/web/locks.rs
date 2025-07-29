@@ -301,24 +301,6 @@ pub async fn check_auth_locks(
     Err(AppError::Unauthorized("Invalid Credentials".to_string()))
 }
 
-pub async fn is_home_locked(state: Arc<AppState>, hashed_ip: &str) -> Result<(), AppError> {
-    if is_temporarily_locked_ms(
-        state.clone(),
-        WebsitePath::Home.as_ref(),
-        RedisAction::LockedTemporary.as_ref(),
-        hashed_ip,
-        state.config.website_specific.home_limit_ms.into(),
-    )
-    .await?
-    {
-        return Err(AppError::Unauthorized(
-            "Too many requests from your ip".to_string(),
-        ));
-    }
-
-    Ok(())
-}
-
 pub async fn increment_lock_key(
     state: Arc<AppState>,
     website_path: &str,
@@ -353,25 +335,6 @@ pub async fn is_redis_locked(
         Some(attempts) => Ok(attempts.parse::<u8>()? >= *threshold),
         None => Ok(false),
     }
-}
-
-pub async fn is_temporarily_locked_ms(
-    state: Arc<AppState>,
-    website_path: &str,
-    key: &str,
-    id: &str,
-    ttl_ms: i64,
-) -> Result<bool, AppError> {
-    let result: Option<String> = redis::cmd("SET")
-        .arg(format!("{}:{}:{}", website_path, key, id))
-        .arg("1")
-        .arg("NX")
-        .arg("PX")
-        .arg(ttl_ms)
-        .query_async(&mut state.redis_connection_manager.clone())
-        .await?;
-
-    Ok(result.is_none())
 }
 
 pub async fn is_temporarily_locked(

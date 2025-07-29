@@ -1,10 +1,10 @@
 use super::{
     cookies::{clear_cookies, remove_cookie},
     locks::{
-        check_auth_locks, check_forgot_locks, freeze_account, is_home_locked,
-        prepare_resend_and_check_locks, unfreeze_account,
+        check_auth_locks, check_forgot_locks, freeze_account, prepare_resend_and_check_locks,
+        unfreeze_account,
     },
-    models::{Account, METRICS_ROUTE, PHOTOS_PREFIX, RedisAction, Token, WebsitePath},
+    models::{Account, METRICS_ROUTE, PHOTOS_PREFIX, RedisAction, Token},
     sessions::{
         create_forgot_redis_account, create_session, create_temporary_session,
         try_create_redis_account, try_get_redis_account,
@@ -15,10 +15,7 @@ use super::{
         is_request_authorized,
     },
 };
-use crate::{
-    AppError, AppState,
-    metrics::{get_visitors_payload, incr_visitors},
-};
+use crate::{AppError, AppState};
 use axum::{
     Extension, Json,
     extract::{ConnectInfo, Request, State},
@@ -37,13 +34,7 @@ pub async fn api_token_check(
 ) -> Result<impl IntoResponse, AppError> {
     let path = request.uri().path();
 
-    if path == METRICS_ROUTE {
-        return Ok(next.run(request).await);
-    }
-
-    if path.starts_with(PHOTOS_PREFIX) {
-        incr_visitors(state.clone(), WebsitePath::Photos).await?;
-
+    if path == METRICS_ROUTE || path.starts_with(PHOTOS_PREFIX) {
         return Ok(next.run(request).await);
     }
 
@@ -242,14 +233,4 @@ pub async fn resend_handler(
         .await?,
     )
         .into_response())
-}
-
-pub async fn visitors_handler(
-    headers: HeaderMap,
-    ConnectInfo(address): ConnectInfo<SocketAddr>,
-    State(state): State<Arc<AppState>>,
-) -> Result<impl IntoResponse, AppError> {
-    is_home_locked(state.clone(), &get_hashed_ip(&headers, address.ip())).await?;
-
-    Ok((StatusCode::OK, get_visitors_payload(state.clone()).await?).into_response())
 }

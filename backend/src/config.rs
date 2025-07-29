@@ -35,7 +35,6 @@ pub struct Session {
 #[derive(Clone)]
 pub struct WebsiteSpecific {
     pub max_items: u8,
-    pub home_limit_ms: u8,
 }
 
 #[derive(Clone)]
@@ -110,7 +109,6 @@ impl Session {
 impl WebsiteSpecific {
     pub fn load() -> Result<Self, AppError> {
         Ok(Self {
-            home_limit_ms: try_load("RUST_HOME_LIMIT_MS", "50")?,
             max_items: try_load("RUST_MAX_ITEMS", "15")?,
         })
     }

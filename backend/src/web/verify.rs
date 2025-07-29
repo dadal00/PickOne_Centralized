@@ -7,7 +7,6 @@ use super::{
 use crate::{
     AppError, AppState, RedisAction, WebsitePath, WebsiteRoute,
     config::{read_secret, try_load},
-    metrics::incr_visitors,
 };
 use argon2::{
     Algorithm::Argon2id, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier,
@@ -190,7 +189,7 @@ pub async fn is_request_authorized(
         return Err(AppError::Unauthorized("Unable to verify".to_string()));
     }
 
-    let website_path = check_path(state.clone(), request)
+    let website_path = check_path(request)
         .await?
         .ok_or_else(|| AppError::Unauthorized("Unable to verify".to_string()))?;
 
@@ -219,10 +218,7 @@ pub fn check_resend(payload: &VerifiedTokenResult) -> Result<(), AppError> {
     Ok(())
 }
 
-async fn check_path(
-    state: Arc<AppState>,
-    request: &mut Request,
-) -> Result<Option<WebsitePath>, AppError> {
+async fn check_path(request: &mut Request) -> Result<Option<WebsitePath>, AppError> {
     match request.uri().path() {
         path if path.starts_with(&format!(
             "/{}/{}",
@@ -230,8 +226,6 @@ async fn check_path(
             WebsiteRoute::Api.as_ref()
         )) =>
         {
-            incr_visitors(state.clone(), WebsitePath::BoilerSwap).await?;
-
             label_request(request, WebsitePath::BoilerSwap);
 
             Ok(Some(WebsitePath::BoilerSwap))
@@ -242,8 +236,6 @@ async fn check_path(
             WebsiteRoute::Api.as_ref()
         )) =>
         {
-            incr_visitors(state.clone(), WebsitePath::Housing).await?;
-
             Ok(Some(WebsitePath::Housing))
         }
         path if path.starts_with(&format!(
@@ -252,8 +244,6 @@ async fn check_path(
             WebsiteRoute::Api.as_ref()
         )) =>
         {
-            incr_visitors(state.clone(), WebsitePath::Home).await?;
-
             Ok(Some(WebsitePath::Home))
         }
         _ => Ok(None),

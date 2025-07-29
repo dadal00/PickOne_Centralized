@@ -1,8 +1,7 @@
 use super::meilisearch::add_items;
 use crate::{
     AppError, AppState, WebsitePath,
-    metrics::{decr_metric, incr_metric},
-    tables,
+    utilities::convert_i8_to_u8,
     web::swap::cdc::{convert_cdc_item, handle_item_deletion},
 };
 use anyhow::{Error as anyhowError, Result as anyResult};
@@ -30,9 +29,7 @@ pub struct ScyllaCDCParams {
 
 #[derive(Clone)]
 pub struct RedisCDCParams {
-    pub metric: String,
     pub deletion_name: String,
-    pub metric_prefix: String,
 }
 
 pub struct MeiliConsumer {
@@ -40,9 +37,7 @@ pub struct MeiliConsumer {
     pub meili_index: String,
     pub scylla_id_name: String,
     pub website_path: WebsitePath,
-    pub redis_metric: String,
     pub redis_deletion_name: String,
-    pub redis_metric_prefix: String,
 }
 
 impl MeiliConsumer {
@@ -51,18 +46,14 @@ impl MeiliConsumer {
         meili_index: String,
         scylla_id_name: String,
         website_path: WebsitePath,
-        redis_metric: String,
         redis_deletion_name: String,
-        redis_metric_prefix: String,
     ) -> Self {
         Self {
             state,
             meili_index,
             scylla_id_name,
             website_path,
-            redis_metric,
             redis_deletion_name,
-            redis_metric_prefix,
         }
     }
 }
@@ -72,17 +63,6 @@ impl Consumer for MeiliConsumer {
     async fn consume_cdc(&mut self, data: CDCRow<'_>) -> anyResult<()> {
         match data.operation {
             OperationType::RowInsert => {
-                incr_metric(
-                    self.state.clone(),
-                    &format!(
-                        "{}:{}:{}",
-                        self.website_path.as_ref(),
-                        &self.redis_metric_prefix,
-                        &self.redis_metric,
-                    ),
-                )
-                .await?;
-
                 choose_addition(
                     &data,
                     self.state.meili_client.clone(),
@@ -98,17 +78,6 @@ impl Consumer for MeiliConsumer {
             | OperationType::RowRangeDelExclLeft
             | OperationType::RowRangeDelInclRight
             | OperationType::RowRangeDelExclRight => {
-                decr_metric(
-                    self.state.clone(),
-                    &format!(
-                        "{}:{}:{}",
-                        self.website_path.as_ref(),
-                        &self.redis_metric_prefix,
-                        &self.redis_metric,
-                    ),
-                )
-                .await?;
-
                 choose_deletion(
                     &data,
                     self.state.clone(),
@@ -177,9 +146,7 @@ pub struct MeiliConsumerFactory {
     pub meili_index: String,
     pub scylla_id_name: String,
     pub website_path: WebsitePath,
-    pub redis_metric: String,
     pub redis_deletion_name: String,
-    pub redis_metric_prefix: String,
 }
 
 #[async_trait]
@@ -191,9 +158,7 @@ impl ConsumerFactory for MeiliConsumerFactory {
                 self.meili_index.clone(),
                 self.scylla_id_name.clone(),
                 self.website_path.clone(),
-                self.redis_metric.clone(),
                 self.redis_deletion_name.clone(),
-                self.redis_metric_prefix.clone(),
             )
             .await,
         )
@@ -205,12 +170,13 @@ pub async fn start_cdc(
     scylla_params: ScyllaCDCParams,
     website_path: WebsitePath,
     redis_params: RedisCDCParams,
+    cdc_table_name: &str,
 ) -> Result<(CDCLogReader, RemoteHandle<Result<(), anyhowError>>), AppError> {
     let items_checkpoint_saver = Arc::new(
         TableBackedCheckpointSaver::new_with_default_ttl(
             state.database_session.clone(),
             &scylla_params.keyspace,
-            tables::boiler_swap::CDC,
+            cdc_table_name,
         )
         .await
         .unwrap(),
@@ -231,9 +197,7 @@ pub async fn start_cdc(
             meili_index: scylla_params.table,
             scylla_id_name: scylla_params.id_name,
             website_path,
-            redis_metric: redis_params.metric,
             redis_deletion_name: redis_params.deletion_name,
-            redis_metric_prefix: redis_params.metric_prefix,
         }))
         .checkpoint_saver(items_checkpoint_saver)
         .build()
@@ -280,8 +244,4 @@ pub fn get_cdc_date(data: &CDCRow<'_>, column: &str) -> String {
         .checked_add_signed(chronoDuration::days(days - 2_147_483_648))
         .map(|d| d.format("%Y-%m-%d").to_string())
         .expect("Missing the date attribute!")
-}
-
-pub fn convert_i8_to_u8(payload: &i8) -> u8 {
-    payload.checked_abs().unwrap_or(0) as u8
 }

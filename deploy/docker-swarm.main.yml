@@ -103,8 +103,6 @@ services:
       - SVELTE_URL=${SVELTE_URL}
       - MEILI_URL=${MEILI_URL}
       - RUST_CONTAINER_FOLDER_PATH=${RUST_CONTAINER_FOLDER_PATH}
-      # Home
-      - RUST_HOME_LIMIT_MS=${RUST_HOME_LIMIT_MS}
       # Housing
       - RUST_HOUSING_FILE=${RUST_HOUSING_FILE}
       # Swap
