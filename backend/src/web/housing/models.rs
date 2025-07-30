@@ -4,21 +4,14 @@ use std::collections::HashMap;
 use strum_macros::{AsRefStr, EnumString};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ThumbsPayload {
     pub id: Uuid,
-    pub housing_id: String,
     pub thumbs_up: u64,
     pub thumbs_down: u64,
 }
 
-pub type ThumbsDeltaMap = HashMap<Uuid, ThumbsDeltaEntry>;
-
-#[derive(Deserialize)]
-pub struct ThumbsDeltaEntry {
-    pub housing_id: HousingID,
-    pub delta: ThumbsDelta,
-}
+pub type ThumbsDeltaMap = HashMap<Uuid, ThumbsDelta>;
 
 #[derive(EnumString, AsRefStr, PartialEq, Clone, Deserialize)]
 pub enum ThumbsDelta {

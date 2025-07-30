@@ -1,16 +1,19 @@
 use super::{
+    database::{delete_housing_id, get_housing_id},
     models::{HousingID, RatingsBrokenDown, Review, SemesterSeason, ThumbsPayload},
     schema::{KEYSPACE, columns::reviews, tables},
 };
 use crate::{
     AppError, AppState, ScyllaCDCParams, WebsitePath,
-    microservices::cdc::utilities::{
-        get_cdc_id, get_cdc_text, get_cdc_u8, get_cdc_u16, get_cdc_u64,
+    microservices::{
+        cdc::utilities::{get_cdc_id, get_cdc_text, get_cdc_u8, get_cdc_u16, get_cdc_u64},
+        meilisearch::{add_items, delete_item, update_items},
     },
     start_cdc,
 };
-use anyhow::Error as anyhowError;
+use anyhow::{Error as anyhowError, Result as anyResult};
 use futures_util::future::RemoteHandle;
+use meilisearch_sdk::client::Client;
 use scylla_cdc::{consumer::CDCRow, log_reader::CDCLogReader};
 use std::sync::Arc;
 
@@ -47,10 +50,6 @@ fn convert_cdc_ratings(data: &CDCRow<'_>) -> RatingsBrokenDown {
 pub fn convert_cdc_thumbs(data: &CDCRow<'_>) -> ThumbsPayload {
     ThumbsPayload {
         id: get_cdc_id(data, reviews::REVIEW_ID),
-        housing_id: HousingID::try_from(get_cdc_u8(data, reviews::HOUSING_ID))
-            .expect("Invalid id!")
-            .as_ref()
-            .to_string(),
         thumbs_up: get_cdc_u64(data, reviews::THUMBS_UP),
         thumbs_down: get_cdc_u64(data, reviews::THUMBS_DOWN),
     }
@@ -64,11 +63,51 @@ pub async fn start_housing_cdc(
         ScyllaCDCParams {
             keyspace: KEYSPACE.to_string(),
             table: tables::REVIEWS.to_string(),
-            id_name: reviews::REVIEW_ID.to_string(),
         },
         WebsitePath::Housing,
-        None,
         tables::REVIEWS_CDC,
+    )
+    .await
+}
+
+pub async fn handle_review_updates(data: &CDCRow<'_>, state: Arc<AppState>) -> anyResult<()> {
+    let thumbs = convert_cdc_thumbs(data);
+
+    update_items(
+        state.meili_client.clone(),
+        &get_housing_id(state.clone(), &thumbs.id).await?,
+        &[thumbs.clone()],
+        reviews::REVIEW_ID,
+    )
+    .await
+}
+
+pub async fn handle_review_deletion(data: &CDCRow<'_>, state: Arc<AppState>) -> anyResult<()> {
+    let id = get_cdc_id(data, reviews::REVIEW_ID);
+
+    delete_item(
+        state.meili_client.clone(),
+        &get_housing_id(state.clone(), &id).await?,
+        id,
+    )
+    .await?;
+
+    delete_housing_id(state, &id).await?;
+
+    Ok(())
+}
+
+pub async fn handle_review_insertion(
+    data: &CDCRow<'_>,
+    meili_client: Arc<Client>,
+) -> anyResult<()> {
+    let review = convert_cdc_review(data);
+
+    add_items(
+        meili_client,
+        &review.housing_id.clone(),
+        &[review],
+        reviews::REVIEW_ID,
     )
     .await
 }

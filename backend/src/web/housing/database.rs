@@ -23,6 +23,9 @@ pub struct Housing {
     pub get_all_reviews: PreparedStatement,
     pub insert_review: PreparedStatement,
     pub update_thumbs: PreparedStatement,
+    pub get_housing_id: PreparedStatement,
+    pub insert_housing_id: PreparedStatement,
+    pub delete_housing_id: PreparedStatement,
 }
 
 impl Housing {
@@ -71,9 +74,18 @@ impl Housing {
                     reviews::THUMBS_DOWN,
                 ))
                 .await?,
+            insert_housing_id: session
+                .prepare(format!(
+                    "INSERT INTO {}.{} ({}, {}) VALUES (?, ?)",
+                    KEYSPACE,
+                    tables::REVIEWS_HOUSING_ID,
+                    reviews::REVIEW_ID,
+                    reviews::HOUSING_ID,
+                ))
+                .await?,
             update_thumbs: session
                 .prepare(format!(
-                    "UPDATE {}.{} SET {} = {} + ?, SET {} = {} + ? WHERE {} = ? AND {} = ?",
+                    "UPDATE {}.{} SET {} = {} + ?, SET {} = {} + ? WHERE {} = ?",
                     KEYSPACE,
                     tables::REVIEWS,
                     reviews::THUMBS_UP,
@@ -81,7 +93,23 @@ impl Housing {
                     reviews::THUMBS_DOWN,
                     reviews::THUMBS_DOWN,
                     reviews::REVIEW_ID,
+                ))
+                .await?,
+            get_housing_id: session
+                .prepare(format!(
+                    "SELECT {} FROM {}.{} WHERE {} = ?",
                     reviews::HOUSING_ID,
+                    KEYSPACE,
+                    tables::REVIEWS_HOUSING_ID,
+                    reviews::REVIEW_ID,
+                ))
+                .await?,
+            delete_housing_id: session
+                .prepare(format!(
+                    "DELETE FROM {}.{} WHERE {} = ?",
+                    KEYSPACE,
+                    tables::REVIEWS_HOUSING_ID,
+                    reviews::REVIEW_ID,
                 ))
                 .await?,
         })
@@ -96,7 +124,7 @@ pub async fn create_housing_tables(session: &Session) -> Result<(), AppError> {
     session
         .query_unpaged(
             format!(
-                "CREATE TABLE IF NOT EXISTS {}.{} ({} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, PRIMARY KEY({}, {})) WITH cdc = {{'enabled': true}}",
+                "CREATE TABLE IF NOT EXISTS {}.{} ({} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, PRIMARY KEY({})) WITH cdc = {{'enabled': true}}",
                 KEYSPACE,
                 tables::REVIEWS,
                 reviews::REVIEW_ID,
@@ -126,7 +154,22 @@ pub async fn create_housing_tables(session: &Session) -> Result<(), AppError> {
                 reviews::THUMBS_DOWN,
                 reviews::THUMBS_DOWN_TYPE,
                 reviews::PRIMARY_KEY,
-                reviews::CLUSTER_KEY,
+            ),
+            &[],
+        )
+        .await?;
+
+    session
+        .query_unpaged(
+            format!(
+                "CREATE TABLE IF NOT EXISTS {}.{} ({} {}, {} {}, PRIMARY KEY({}))",
+                KEYSPACE,
+                tables::REVIEWS_HOUSING_ID,
+                reviews::REVIEW_ID,
+                reviews::REVIEW_ID_TYPE,
+                reviews::HOUSING_ID,
+                reviews::HOUSING_ID_TYPE,
+                reviews::PRIMARY_KEY,
             ),
             &[],
         )
@@ -198,14 +241,16 @@ pub fn convert_db_reviews(row_vec: &Vec<ReviewRow>) -> Vec<Review> {
 
 pub async fn insert_review(state: Arc<AppState>, review: ReviewPayload) -> Result<(), AppError> {
     let fallback_page_state = PagingState::start();
+    let id = Uuid::new_v4();
+    let housing_id = review.housing_id;
 
     state
         .database_session
         .execute_single_page(
             &state.database_queries.housing.insert_review,
             (
-                Uuid::new_v4(),
-                review.housing_id as i8,
+                id,
+                housing_id.clone() as i8,
                 review.overall_rating as i16,
                 review.ratings.living_conditions as i16,
                 review.ratings.location as i16,
@@ -218,6 +263,15 @@ pub async fn insert_review(state: Arc<AppState>, review: ReviewPayload) -> Resul
                 0i64,
                 0i64,
             ),
+            fallback_page_state.clone(),
+        )
+        .await?;
+
+    state
+        .database_session
+        .execute_single_page(
+            &state.database_queries.housing.insert_housing_id,
+            (id, housing_id as i8),
             fallback_page_state,
         )
         .await?;
@@ -232,18 +286,53 @@ pub async fn update_thumbs(
     let mut batch: Batch = Default::default();
     let mut batch_values = Vec::new();
 
-    for (uuid, entry) in thumbs_map {
+    for (uuid, delta) in thumbs_map {
         batch.append_statement(state.database_queries.housing.update_thumbs.clone());
 
-        let (up, down) = match entry.delta {
+        let (up, down) = match delta {
             ThumbsDelta::Up => (1i64, 0i64),
             ThumbsDelta::Down => (0i64, 1i64),
         };
 
-        batch_values.push((up, down, uuid, entry.housing_id as i8));
+        batch_values.push((up, down, uuid));
     }
 
     state.database_session.batch(&batch, &batch_values).await?;
+
+    Ok(())
+}
+
+pub async fn get_housing_id(state: Arc<AppState>, review_id: &Uuid) -> Result<String, AppError> {
+    let fallback_page_state = PagingState::start();
+
+    let (returned_rows, _) = state
+        .database_session
+        .execute_single_page(
+            &state.database_queries.housing.get_housing_id,
+            (review_id,),
+            fallback_page_state,
+        )
+        .await?;
+
+    let (housing_id_i8,) = returned_rows.into_rows_result()?.first_row::<(i8,)>()?;
+
+    Ok(HousingID::try_from(convert_i8_to_u8(&housing_id_i8))
+        .expect("Invalid id!")
+        .as_ref()
+        .to_string())
+}
+
+pub async fn delete_housing_id(state: Arc<AppState>, review_id: &Uuid) -> Result<(), AppError> {
+    let fallback_page_state = PagingState::start();
+
+    state
+        .database_session
+        .execute_single_page(
+            &state.database_queries.housing.delete_housing_id,
+            (review_id,),
+            fallback_page_state,
+        )
+        .await?;
 
     Ok(())
 }

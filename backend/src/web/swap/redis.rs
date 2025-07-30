@@ -1,7 +1,9 @@
-use super::{database::insert_item, models::ItemPayload};
+use super::{
+    database::{insert_email, insert_item},
+    models::ItemPayload,
+};
 use crate::{
     AppError, AppState, RedisAction, WebsitePath,
-    microservices::redis::insert_id,
     web::locks::{increment_lock_key, is_redis_locked},
 };
 use once_cell::sync::Lazy;
@@ -25,16 +27,10 @@ async fn handle_item_insertion(
     email: &str,
     website_path: &str,
 ) -> Result<(), AppError> {
-    insert_id(
+    insert_email(
         state.clone(),
-        &format!(
-            "{}:{}:{}",
-            website_path,
-            RedisAction::DeletedItem.as_ref(),
-            &insert_item(state.clone(), item).await?.to_string()
-        ),
+        &insert_item(state.clone(), item).await?,
         email,
-        1_209_600,
     )
     .await?;
 

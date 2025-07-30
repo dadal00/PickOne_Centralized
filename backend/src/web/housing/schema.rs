@@ -4,6 +4,7 @@ pub mod tables {
     pub const HOUSING: &str = "housing";
     pub const REVIEWS: &str = "reviews";
     pub const REVIEWS_CDC: &str = "reviews_cdc";
+    pub const REVIEWS_HOUSING_ID: &str = "reviews_housing_id";
 }
 
 pub mod columns {
@@ -66,6 +67,5 @@ pub mod columns {
         pub const THUMBS_DOWN_TYPE: &str = "counter";
 
         pub const PRIMARY_KEY: &str = REVIEW_ID;
-        pub const CLUSTER_KEY: &str = HOUSING_ID;
     }
 }

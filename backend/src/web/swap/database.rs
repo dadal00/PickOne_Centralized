@@ -32,12 +32,15 @@ pub struct BoilerSwap {
     pub get_items: PreparedStatement,
     pub delete_item: PreparedStatement,
     pub get_cron_items: PreparedStatement,
+    pub get_email: PreparedStatement,
+    pub insert_email: PreparedStatement,
+    pub delete_email: PreparedStatement,
 }
 
 impl BoilerSwap {
     pub async fn init(session: &Session) -> Result<Self, AppError> {
         Ok(Self {
-            get_user: session
+        get_user: session
             .prepare(format!(
                 "SELECT {}, {} FROM {}.{} WHERE {} = ?",
                 users::PASSWORD_HASH,
@@ -88,7 +91,7 @@ impl BoilerSwap {
             .await?,
         insert_item: session
             .prepare(format!(
-                "INSERT INTO {}.{} ({}, {}, {}, {}, {}, {}, {}, {}) VALUES (?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?",
+                "INSERT INTO {}.{} ({}, {}, {}, {}, {}, {}, {}, {}) VALUES (?, ?, ?, ?, ?, ?, ?, ?) USING TTL {}",
                 KEYSPACE,
                 tables::ITEMS,
                 items::ITEM_ID,
@@ -99,6 +102,7 @@ impl BoilerSwap {
                 items::DESCRIPTION,
                 items::EMOJI,
                 items::EXPIRATION_DATE,
+                items::TTL,
             ))
             .await?,
         get_items: session
@@ -134,6 +138,33 @@ impl BoilerSwap {
                 "DELETE FROM {}.{} WHERE {} = ?",
                 KEYSPACE,
                 tables::ITEMS,
+                items::ITEM_ID,
+            ))
+            .await?,
+        get_email: session
+            .prepare(format!(
+                "SELECT {} FROM {}.{} WHERE {} = ?",
+                users::EMAIL,
+                KEYSPACE,
+                tables::ITEMS_EMAIL,
+                items::PRIMARY_KEY,
+            ))
+            .await?,
+        insert_email: session
+            .prepare(format!(
+                "INSERT INTO {}.{} ({}, {}) VALUES (?, ?) USING TTL {}",
+                KEYSPACE,
+                tables::ITEMS_EMAIL,
+                items::ITEM_ID,
+                users::EMAIL,
+                items::SAFE_TTL,
+            ))
+            .await?,
+        delete_email: session
+            .prepare(format!(
+                "DELETE FROM {}.{} WHERE {} = ?",
+                KEYSPACE,
+                tables::ITEMS_EMAIL,
                 items::ITEM_ID,
             ))
             .await?,
@@ -207,6 +238,22 @@ pub async fn create_swap_tables(session: &Session) -> Result<(), AppError> {
         )
         .await?;
 
+    session
+        .query_unpaged(
+            format!(
+                "CREATE TABLE IF NOT EXISTS {}.{} ({} {}, {} {}, PRIMARY KEY({}))",
+                KEYSPACE,
+                tables::ITEMS_EMAIL,
+                items::ITEM_ID,
+                items::ITEM_ID_TYPE,
+                users::EMAIL,
+                users::EMAIL_TYPE,
+                items::PRIMARY_KEY,
+            ),
+            &[],
+        )
+        .await?;
+
     Ok(())
 }
 
@@ -227,7 +274,6 @@ pub async fn insert_item(state: Arc<AppState>, item: ItemPayload) -> Result<Uuid
                 item.description,
                 item.emoji as i8,
                 Utc::now().date_naive() + chronoDuration::days(7),
-                604800 * 3,
             ),
             fallback_page_state,
         )
@@ -395,6 +441,53 @@ pub async fn unlock_account(
         .execute_single_page(
             &state.database_queries.boiler_swap.unlock_account,
             (password_hash, email),
+            fallback_page_state,
+        )
+        .await?;
+
+    Ok(())
+}
+
+pub async fn insert_email(state: Arc<AppState>, id: &Uuid, email: &str) -> Result<(), AppError> {
+    let fallback_page_state = PagingState::start();
+
+    state
+        .database_session
+        .execute_single_page(
+            &state.database_queries.boiler_swap.insert_email,
+            (id, email),
+            fallback_page_state,
+        )
+        .await?;
+
+    Ok(())
+}
+
+pub async fn get_email(state: Arc<AppState>, item_id: &Uuid) -> Result<String, AppError> {
+    let fallback_page_state = PagingState::start();
+
+    let (returned_rows, _) = state
+        .database_session
+        .execute_single_page(
+            &state.database_queries.boiler_swap.get_email,
+            (item_id,),
+            fallback_page_state,
+        )
+        .await?;
+
+    let (email,) = returned_rows.into_rows_result()?.first_row::<(String,)>()?;
+
+    Ok(email)
+}
+
+pub async fn delete_email(state: Arc<AppState>, item_id: &Uuid) -> Result<(), AppError> {
+    let fallback_page_state = PagingState::start();
+
+    state
+        .database_session
+        .execute_single_page(
+            &state.database_queries.boiler_swap.delete_email,
+            (item_id,),
             fallback_page_state,
         )
         .await?;

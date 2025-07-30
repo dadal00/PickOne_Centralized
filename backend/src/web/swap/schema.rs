@@ -4,6 +4,7 @@ pub mod tables {
     pub const USERS: &str = "users";
     pub const ITEMS: &str = "items";
     pub const ITEMS_CDC: &str = "items_cdc";
+    pub const ITEMS_EMAIL: &str = "items_email";
 }
 
 pub mod columns {
@@ -47,5 +48,7 @@ pub mod columns {
         pub const EXPIRATION_DATE_TYPE: &str = "date";
 
         pub const PRIMARY_KEY: &str = ITEM_ID;
+        pub const TTL: &str = "1814400";
+        pub const SAFE_TTL: &str = "2419200";
     }
 }

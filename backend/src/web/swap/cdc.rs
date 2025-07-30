@@ -1,4 +1,5 @@
 use super::{
+    database::{delete_email, get_email},
     models::{Condition, CronItem, CronItemRow, Emoji, Item, ItemType, Location},
     redis::decrement_items,
     schema::{KEYSPACE, columns::items, tables},
@@ -6,19 +7,16 @@ use super::{
 use crate::{
     AppError, AppState, RedisAction, ScyllaCDCParams, WebsitePath,
     microservices::{
-        cdc::{
-            core::RedisCDCParams,
-            utilities::{get_cdc_date, get_cdc_id, get_cdc_text, get_cdc_u8},
-        },
+        cdc::utilities::{get_cdc_date, get_cdc_id, get_cdc_text, get_cdc_u8},
         database::DatabaseQueries,
-        meilisearch::delete_item,
-        redis::{remove_id, try_get},
+        meilisearch::{add_items, delete_item},
     },
     start_cdc,
 };
 use anyhow::{Error as anyhowError, Result as anyResult};
 use chrono::Utc;
 use futures_util::future::RemoteHandle;
+use meilisearch_sdk::client::Client;
 use scylla::{client::session::Session, response::PagingState, statement::batch::Batch};
 use scylla_cdc::{consumer::CDCRow, log_reader::CDCLogReader};
 use std::{ops::ControlFlow, sync::Arc};
@@ -139,46 +137,20 @@ pub fn convert_cdc_item(data: &CDCRow<'_>) -> Item {
     }
 }
 
-pub async fn handle_item_deletion(
-    data: &CDCRow<'_>,
-    state: Arc<AppState>,
-    meili_index: &str,
-    redis_deletion_name: &str,
-    scylla_id_name: &str,
-    website_path: &str,
-) -> anyResult<()> {
-    let id = get_cdc_id(data, scylla_id_name);
+pub async fn handle_item_deletion(data: &CDCRow<'_>, state: Arc<AppState>) -> anyResult<()> {
+    let id = get_cdc_id(data, items::ITEM_ID);
 
-    delete_item(state.meili_client.clone(), meili_index, id).await?;
+    delete_item(state.meili_client.clone(), tables::ITEMS, id).await?;
 
     decrement_items(
         state.redis_connection_manager.clone(),
-        website_path,
+        WebsitePath::BoilerSwap.as_ref(),
         RedisAction::LockedItems.as_ref(),
-        &try_get(
-            state.clone(),
-            &format!(
-                "{}:{}:{}",
-                website_path,
-                redis_deletion_name,
-                &id.to_string()
-            ),
-        )
-        .await?
-        .expect("item insertion misconfigured"),
+        &get_email(state.clone(), &id).await?,
     )
     .await?;
 
-    remove_id(
-        state.clone(),
-        &format!(
-            "{}:{}:{}",
-            website_path,
-            redis_deletion_name,
-            &id.to_string()
-        ),
-    )
-    .await?;
+    delete_email(state, &id).await?;
 
     Ok(())
 }
@@ -191,13 +163,19 @@ pub async fn start_swap_cdc(
         ScyllaCDCParams {
             keyspace: KEYSPACE.to_string(),
             table: tables::ITEMS.to_string(),
-            id_name: items::ITEM_ID.to_string(),
         },
         WebsitePath::BoilerSwap,
-        Some(RedisCDCParams {
-            deletion_name: RedisAction::DeletedItem.as_ref().to_string(),
-        }),
         tables::ITEMS_CDC,
+    )
+    .await
+}
+
+pub async fn handle_item_insertion(data: &CDCRow<'_>, meili_client: Arc<Client>) -> anyResult<()> {
+    add_items(
+        meili_client,
+        tables::ITEMS,
+        &[convert_cdc_item(data)],
+        items::ITEM_ID,
     )
     .await
 }

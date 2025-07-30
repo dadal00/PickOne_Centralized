@@ -16,19 +16,12 @@ pub static BASE_DATE: Lazy<NaiveDate> = Lazy::new(|| NaiveDate::from_ymd_opt(197
 pub struct ScyllaCDCParams {
     pub keyspace: String,
     pub table: String,
-    pub id_name: String,
-}
-
-#[derive(Clone)]
-pub struct RedisCDCParams {
-    pub deletion_name: String,
 }
 
 pub async fn start_cdc(
     state: Arc<AppState>,
     scylla_params: ScyllaCDCParams,
     website_path: WebsitePath,
-    redis_params: Option<RedisCDCParams>,
     cdc_table_name: &str,
 ) -> Result<(CDCLogReader, RemoteHandle<Result<(), anyhowError>>), AppError> {
     let items_checkpoint_saver = Arc::new(
@@ -53,12 +46,7 @@ pub async fn start_cdc(
         .pause_between_saves(Duration::from_secs(10))
         .consumer_factory(Arc::new(MeiliConsumerFactory {
             state: state.clone(),
-            meili_index: scylla_params.table,
-            scylla_id_name: scylla_params.id_name,
             website_path,
-            redis_deletion_name: redis_params
-                .as_ref()
-                .map(|params| params.deletion_name.clone()),
         }))
         .checkpoint_saver(items_checkpoint_saver)
         .build()
