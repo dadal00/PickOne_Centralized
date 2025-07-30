@@ -240,7 +240,7 @@ pub async fn update_thumbs(
             ThumbsDelta::Down => (0i64, 1i64),
         };
 
-        batch_values.push((up, down, uuid, entry.housing_id as i8,));
+        batch_values.push((up, down, uuid, entry.housing_id as i8));
     }
 
     state.database_session.batch(&batch, &batch_values).await?;

@@ -1,4 +1,4 @@
-export type ThumbsDeltaMap = Record<string, ThumbsDelta>;
+export type ThumbsDeltaMap = Record<string, ThumbsDelta>
 
 export type ThumbsDelta = 'up' | 'down'
 
