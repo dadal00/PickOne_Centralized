@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -31,8 +32,7 @@ pub type ReviewRow<'a> = (
     i16,
     i16,
     i16,
-    i8,
-    i8,
+    NaiveDate,
     &'a str,
     i64,
     i64,
@@ -85,9 +85,6 @@ pub struct ReviewPayload {
     pub overall_rating: u16,
     // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
     pub ratings: RatingsBrokenDown,
-    pub semester_season: SemesterSeason,
-    // year <= 255 + 2000
-    pub semester_year: u8,
     pub description: String,
 }
 
@@ -99,9 +96,8 @@ pub struct Review {
     pub overall_rating: u16,
     // 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
     pub ratings: RatingsBrokenDown,
-    pub semester_season: String,
-    // year <= 255 + 2000
-    pub semester_year: u8,
+    // Month Year => May 2025
+    pub date: String,
     pub description: String,
     pub thumbs_up: u64,
     pub thumbs_down: u64,
@@ -117,19 +113,6 @@ pub enum CostSymbol {
 
     #[strum(serialize = "$$$")]
     Expensive,
-}
-
-#[derive(EnumString, TryFromPrimitive, AsRefStr, PartialEq, Clone, Serialize, Deserialize)]
-#[repr(u8)]
-pub enum SemesterSeason {
-    #[strum(serialize = "Fall")]
-    Fall = 0,
-
-    #[strum(serialize = "Spring")]
-    Spring = 1,
-
-    #[strum(serialize = "Summer")]
-    Summer = 2,
 }
 
 #[derive(EnumString, AsRefStr, PartialEq, Clone, Serialize, Deserialize)]

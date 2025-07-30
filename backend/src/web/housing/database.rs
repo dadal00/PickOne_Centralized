@@ -1,7 +1,6 @@
 use super::{
     models::{
-        HousingID, RatingsBrokenDown, Review, ReviewPayload, ReviewRow, SemesterSeason,
-        ThumbsDelta, ThumbsDeltaMap,
+        HousingID, RatingsBrokenDown, Review, ReviewPayload, ReviewRow, ThumbsDelta, ThumbsDeltaMap,
     },
     schema::{KEYSPACE, columns::reviews, tables},
 };
@@ -10,6 +9,7 @@ use crate::{
     microservices::database::CREATE_KEYSPACE,
     utilities::{convert_i8_to_u8, convert_i16_to_u16, convert_i64_to_u64},
 };
+use chrono::Utc;
 use scylla::{
     client::session::Session,
     response::PagingState,
@@ -34,7 +34,7 @@ impl Housing {
             get_all_reviews: session
                 .prepare(
                     Statement::new(format!(
-                        "SELECT {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {} FROM {}.{}",
+                        "SELECT {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {} FROM {}.{}",
                         reviews::REVIEW_ID,
                         reviews::HOUSING_ID,
                         reviews::OVERALL_RATING,
@@ -43,8 +43,7 @@ impl Housing {
                         reviews::RATINGS_AMENITIES,
                         reviews::RATINGS_VALUE,
                         reviews::RATINGS_COMMUNITY,
-                        reviews::SEMESTER_SEASON,
-                        reviews::SEMESTER_YEAR,
+                        reviews::DATE,
                         reviews::DESCRIPTION,
                         reviews::THUMBS_UP,
                         reviews::THUMBS_DOWN,
@@ -56,7 +55,7 @@ impl Housing {
                 .await?,
             insert_review: session
                 .prepare(format!(
-                    "INSERT INTO {}.{} ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO {}.{} ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     KEYSPACE,
                     tables::REVIEWS,
                     reviews::REVIEW_ID,
@@ -67,8 +66,7 @@ impl Housing {
                     reviews::RATINGS_AMENITIES,
                     reviews::RATINGS_VALUE,
                     reviews::RATINGS_COMMUNITY,
-                    reviews::SEMESTER_SEASON,
-                    reviews::SEMESTER_YEAR,
+                    reviews::DATE,
                     reviews::DESCRIPTION,
                     reviews::THUMBS_UP,
                     reviews::THUMBS_DOWN,
@@ -124,7 +122,7 @@ pub async fn create_housing_tables(session: &Session) -> Result<(), AppError> {
     session
         .query_unpaged(
             format!(
-                "CREATE TABLE IF NOT EXISTS {}.{} ({} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, PRIMARY KEY({})) WITH cdc = {{'enabled': true}}",
+                "CREATE TABLE IF NOT EXISTS {}.{} ({} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, {} {}, PRIMARY KEY({})) WITH cdc = {{'enabled': true}}",
                 KEYSPACE,
                 tables::REVIEWS,
                 reviews::REVIEW_ID,
@@ -143,10 +141,8 @@ pub async fn create_housing_tables(session: &Session) -> Result<(), AppError> {
                 reviews::RATINGS_VALUE_TYPE,
                 reviews::RATINGS_COMMUNITY,
                 reviews::RATINGS_COMMUNITY_TYPE,
-                reviews::SEMESTER_SEASON,
-                reviews::SEMESTER_SEASON_TYPE,
-                reviews::SEMESTER_YEAR,
-                reviews::SEMESTER_YEAR_TYPE,
+                reviews::DATE,
+                reviews::DATE_TYPE,
                 reviews::DESCRIPTION,
                 reviews::DESCRIPTION_TYPE,
                 reviews::THUMBS_UP,
@@ -207,8 +203,7 @@ pub fn convert_db_reviews(row_vec: &Vec<ReviewRow>) -> Vec<Review> {
                 ratings_amenities_i16,
                 ratings_value_i16,
                 ratings_community_i16,
-                semester_season_i8,
-                semester_year,
+                date,
                 description,
                 thumbs_up,
                 thumbs_down,
@@ -226,11 +221,7 @@ pub fn convert_db_reviews(row_vec: &Vec<ReviewRow>) -> Vec<Review> {
                     ratings_value_i16,
                     ratings_community_i16,
                 ),
-                semester_season: SemesterSeason::try_from(convert_i8_to_u8(semester_season_i8))
-                    .expect("Invalid semester season!")
-                    .as_ref()
-                    .to_string(),
-                semester_year: convert_i8_to_u8(semester_year),
+                date: date.format("%Y-%m-%d").to_string(),
                 description: description.to_string(),
                 thumbs_up: convert_i64_to_u64(thumbs_up),
                 thumbs_down: convert_i64_to_u64(thumbs_down),
@@ -257,8 +248,7 @@ pub async fn insert_review(state: Arc<AppState>, review: ReviewPayload) -> Resul
                 review.ratings.amenities as i16,
                 review.ratings.value as i16,
                 review.ratings.community as i16,
-                review.semester_season as i8,
-                review.semester_year as i8,
+                Utc::now().date_naive(),
                 review.description,
                 0i64,
                 0i64,

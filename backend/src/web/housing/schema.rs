@@ -10,14 +10,14 @@ pub mod tables {
 pub mod columns {
     pub mod housing {
         pub const ID: &str = "id";
-        pub const _OVERALL_RATING: &str = "overall_rating";
+        pub const OVERALL_RATING: &str = "overall_rating";
         pub const _RATINGS: &str = "ratings";
         pub const _REVIEW_COUNT: &str = "review_count";
         pub const HOUSING_TYPE: &str = "housing_type";
         pub const CAMPUS_TYPE: &str = "campus_type";
-        pub const _WALK_TIME_MINS: &str = "walk_time_mins";
-        pub const _COST_MIN: &str = "cost_min";
-        pub const _COST_MAX: &str = "cost_max";
+        pub const WALK_TIME_MINS: &str = "walk_time_mins";
+        pub const COST_MIN: &str = "cost_min";
+        pub const COST_MAX: &str = "cost_max";
         pub const COST_SYMBOL: &str = "cost_symbol";
         pub const _ADDRESS: &str = "address";
     }
@@ -51,11 +51,8 @@ pub mod columns {
 
         // End of Ratings
 
-        pub const SEMESTER_SEASON: &str = "semester_season";
-        pub const SEMESTER_SEASON_TYPE: &str = "tinyint";
-
-        pub const SEMESTER_YEAR: &str = "semester_year";
-        pub const SEMESTER_YEAR_TYPE: &str = "tinyint";
+        pub const DATE: &str = "date";
+        pub const DATE_TYPE: &str = "date";
 
         pub const DESCRIPTION: &str = "description";
         pub const DESCRIPTION_TYPE: &str = "text";

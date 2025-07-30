@@ -35,12 +35,9 @@ export type RatingsBrokenDown = {
 
 export type CostSymbol = '$' | '$$' | '$$$'
 
-export type SemesterSeason = 'Fall' | 'Spring' | 'Summer'
-
 export const ReviewFields = {
 	HOUSING_ID: 'housing_id',
-	SEMESTER_SEASON: 'semester_season',
-	SEMESTER_YEAR: 'semester_year',
+	DATE: 'date',
 	DESCRIPTION: 'description',
 	THUMBS_UP: 'thumbs_up',
 	THUMBS_DOWN: 'thumbs_down'
@@ -53,9 +50,7 @@ export type Review = {
 	[HousingFields.OVERALL_RATING]: number
 	// 100, 200, 300, 400, 500 => /100 => 1, 2, 3, 4, 5
 	[HousingFields.RATINGS]: RatingsBrokenDown
-	[ReviewFields.SEMESTER_SEASON]: SemesterSeason
-	// year <= 255 + 2000
-	[ReviewFields.SEMESTER_YEAR]: number
+	[ReviewFields.DATE]?: string
 	[ReviewFields.DESCRIPTION]: string
 	[ReviewFields.THUMBS_UP]: number
 	[ReviewFields.THUMBS_DOWN]: number

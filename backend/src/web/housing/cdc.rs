@@ -1,12 +1,14 @@
 use super::{
     database::{delete_housing_id, get_housing_id},
-    models::{HousingID, RatingsBrokenDown, Review, SemesterSeason, ThumbsPayload},
+    models::{HousingID, RatingsBrokenDown, Review, ThumbsPayload},
     schema::{KEYSPACE, columns::reviews, tables},
 };
 use crate::{
     AppError, AppState, ScyllaCDCParams, WebsitePath,
     microservices::{
-        cdc::utilities::{get_cdc_id, get_cdc_text, get_cdc_u8, get_cdc_u16, get_cdc_u64},
+        cdc::utilities::{
+            get_cdc_date, get_cdc_id, get_cdc_text, get_cdc_u8, get_cdc_u16, get_cdc_u64,
+        },
         meilisearch::{add_items, delete_item, update_items},
     },
     start_cdc,
@@ -26,11 +28,7 @@ pub fn convert_cdc_review(data: &CDCRow<'_>) -> Review {
             .to_string(),
         overall_rating: get_cdc_u16(data, reviews::OVERALL_RATING),
         ratings: convert_cdc_ratings(data),
-        semester_season: SemesterSeason::try_from(get_cdc_u8(data, reviews::SEMESTER_SEASON))
-            .expect("Invalid season!")
-            .as_ref()
-            .to_string(),
-        semester_year: get_cdc_u8(data, reviews::SEMESTER_YEAR),
+        date: get_cdc_date(data, reviews::DATE),
         description: get_cdc_text(data, reviews::DESCRIPTION),
         thumbs_up: get_cdc_u64(data, reviews::THUMBS_UP),
         thumbs_down: get_cdc_u64(data, reviews::THUMBS_DOWN),

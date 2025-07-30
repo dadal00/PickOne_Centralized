@@ -202,6 +202,12 @@ pub fn init_housing_settings() -> Settings {
             housing::CAMPUS_TYPE,
             housing::COST_SYMBOL,
         ])
+        .with_sortable_attributes([
+            housing::OVERALL_RATING,
+            housing::WALK_TIME_MINS,
+            housing::COST_MIN,
+            housing::COST_MAX,
+        ])
         .with_typo_tolerance(TypoToleranceSettings {
             enabled: Some(true),
             disable_on_attributes: None,
@@ -225,11 +231,8 @@ pub fn init_review_settings() -> Settings {
         ])
         .with_distinct_attribute(Some(reviews::REVIEW_ID))
         .with_searchable_attributes([reviews::DESCRIPTION])
-        .with_filterable_attributes([
-            reviews::SEMESTER_SEASON,
-            reviews::SEMESTER_YEAR,
-            reviews::OVERALL_RATING,
-        ])
+        .with_filterable_attributes([reviews::OVERALL_RATING])
+        .with_sortable_attributes([reviews::DATE])
         .with_typo_tolerance(TypoToleranceSettings {
             enabled: Some(true),
             disable_on_attributes: None,
