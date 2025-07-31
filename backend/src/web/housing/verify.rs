@@ -4,6 +4,7 @@ use once_cell::sync::Lazy;
 use rustrict::CensorStr;
 
 static MAX_CHARS: Lazy<usize> = Lazy::new(|| try_load("PUBLIC_HOUSING_MAX_CHARS", "350").unwrap());
+static MIN_CHARS: Lazy<usize> = Lazy::new(|| try_load("PUBLIC_HOUSING_MIN_CHARS", "50").unwrap());
 
 pub fn check_review(payload: &ReviewPayload) -> Result<(), AppError> {
     validate_review(payload).map_err(|e| AppError::BadRequest(e.to_string()))?;
@@ -41,8 +42,8 @@ fn validate_ratings(overall_rating: &u16, ratings: &RatingsBrokenDown) -> Result
 }
 
 fn validate_description(payload: &str) -> Result<(), &'static str> {
-    if !payload.len() < *MAX_CHARS {
-        return Err("Too many chars");
+    if payload.len() > *MAX_CHARS || payload.len() < *MIN_CHARS {
+        return Err("Char count wrong");
     }
 
     if payload.is_inappropriate() {
