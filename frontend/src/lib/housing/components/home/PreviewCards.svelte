@@ -4,6 +4,8 @@
 	import Button from '$lib/housing/components/templates/Button.svelte'
 	import CardPiece from '$lib/housing/components/templates/CardPiece.svelte'
 	import { ArrowRight, Star } from '@lucide/svelte'
+	import { HousingFields, HousingNameLabels } from '$lib/housing/models'
+	import { convertRatingToHousingLabel } from '$lib/housing/utils'
 
 	const featuredHousing = $derived(appState.sampleHousing(3))
 </script>
@@ -31,27 +33,27 @@
 									className="text-2xl font-bold text-gray-900 group-hover:text-yellow-700 transition-colors mb-2 dark:text-gray-100 dark:group-hover:text-yellow-400"
 									cardPiece="cardTitle"
 								>
-									{housing.name}
+									{HousingNameLabels[housing[HousingFields.ID]]}
 								</CardPiece>
 								<p class="text-sm text-gray-500 dark:text-gray-400 font-medium">
-									{housing.type}
+									{housing[HousingFields.CAMPUS_TYPE] + ' ' + housing[HousingFields.HOUSING_TYPE]}
 								</p>
 							</div>
 							<div class="text-right ml-4">
 								<div class="flex items-center space-x-2 mb-1">
 									<Star class="h-6 w-6 fill-yellow-400 text-yellow-400" />
 									<span class="text-2xl font-bold text-gray-900 dark:text-gray-100"
-										>{housing.rating}</span
+										>{convertRatingToHousingLabel(housing[HousingFields.OVERALL_RATING])}</span
 									>
 								</div>
 								<p class="text-sm text-gray-500 dark:text-gray-400">
-									{housing.reviewCount} reviews
+									{housing[HousingFields.REVIEW_COUNT]} reviews
 								</p>
 							</div>
 						</div>
 					</CardPiece>
 					<CardPiece className="pt-0" cardPiece="cardContent">
-						<a href={`${PUBLIC_SVELTE_HOUSING_ROOT}/housing/${housing.id}`}>
+						<a href={`${PUBLIC_SVELTE_HOUSING_ROOT}/housing/${housing[HousingFields.ID]}`}>
 							<Button
 								className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold py-3 rounded-xl shadow-lg hover:shadow-xl transition-all group"
 							>

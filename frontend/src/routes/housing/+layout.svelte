@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state'
+	import Footer from '$lib/housing/components/layout/Footer.svelte'
 	import Header from '$lib/housing/components/layout/Header.svelte'
 	import '$lib/housing/housing.css'
 
@@ -15,5 +17,10 @@
 
 <main>
 	<Header />
+
 	{@render children()}
+
+	{#if !page.url.pathname.includes('/submit-review')}
+		<Footer />
+	{/if}
 </main>

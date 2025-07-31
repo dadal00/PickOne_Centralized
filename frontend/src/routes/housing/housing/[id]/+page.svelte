@@ -4,7 +4,7 @@
 	import { appState } from '$lib/housing/AppState.svelte'
 	import Body from '$lib/housing/components/housing/Body.svelte'
 
-	let housing = $derived(appState.getHousingDetails(page.params.id))
+	let housing = $derived(appState.getHousing(page.params.id))
 </script>
 
 {#if !housing}
@@ -15,7 +15,7 @@
 	>
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 			<HousingTitle {housing} />
-			<Body />
+			<Body {housing} />
 		</div>
 	</div>
 {/if}

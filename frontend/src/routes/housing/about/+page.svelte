@@ -1,9 +1,7 @@
 <script lang="ts">
 	import Title from '$lib/housing/components/about/Title.svelte'
-	import Story from '$lib/housing/components/about/Story.svelte'
 	import Why from '$lib/housing/components/about/Why.svelte'
 	import Values from '$lib/housing/components/about/Values.svelte'
-	import HowItWorks from '$lib/housing/components/about/HowItWorks.svelte'
 	import Join from '$lib/housing/components/about/Join.svelte'
 </script>
 
@@ -12,10 +10,8 @@
 >
 	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
 		<Title />
-		<Story />
 		<Why />
 		<Values />
-		<HowItWorks />
 		<Join />
 	</div>
 </div>

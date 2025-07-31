@@ -3,6 +3,7 @@
 	import '../app.css'
 	import { browser } from '$app/environment'
 	import { refreshToken } from '$lib/utils'
+	import { SvelteToast } from '@zerodevx/svelte-toast'
 
 	let { children } = $props()
 	let interval: number
@@ -28,6 +29,8 @@
 		clearInterval(interval)
 	})
 </script>
+
+<SvelteToast />
 
 <main class="w-screen h-screen">
 	{@render children()}

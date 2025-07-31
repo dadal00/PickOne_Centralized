@@ -2,7 +2,6 @@
 	import Search from '$lib/housing/components/home/Search.svelte'
 	import Stats from '$lib/housing/components/home/Stats.svelte'
 	import PreviewCards from '$lib/housing/components/home/PreviewCards.svelte'
-	import Footer from '$lib/housing/components/home/Footer.svelte'
 </script>
 
 <div
@@ -11,5 +10,4 @@
 	<Search />
 	<Stats />
 	<PreviewCards />
-	<Footer />
 </div>

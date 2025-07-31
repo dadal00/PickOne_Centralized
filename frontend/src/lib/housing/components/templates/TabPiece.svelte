@@ -6,14 +6,14 @@
 		className = '',
 		tabPiece,
 		tabValue,
-		activeTabValue = $bindable(),
+		activeTab = $bindable(),
 		activeClasses,
 		children
 	} = $props<{
 		className?: string
 		tabPiece: 'list' | 'trigger' | 'content'
 		tabValue?: string
-		activeTabValue?: string
+		activeTab?: string
 		activeClasses?: string
 		children: Snippet
 	}>()
@@ -27,7 +27,7 @@
 	}
 
 	function handleClick() {
-		activeTabValue = tabValue
+		activeTab = tabValue
 	}
 </script>
 
@@ -40,7 +40,7 @@
 		class={cn(
 			styles.trigger,
 			className,
-			tabValue === activeTabValue && `bg-background text-foreground shadow-sm ${activeClasses}`
+			tabValue === activeTab && `bg-background text-foreground shadow-sm ${activeClasses}`
 		)}
 		onclick={handleClick}
 	>

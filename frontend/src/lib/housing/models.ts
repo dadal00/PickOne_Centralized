@@ -24,6 +24,11 @@ export const RatingCategoryLabels: Record<RatingCategoryValue, string> = {
 	[RatingCategory.COMMUNITY]: 'Community'
 }
 
+export const RatingCategoryIterable = Object.entries(RatingCategoryLabels) as [
+	RatingCategoryValue,
+	string
+][]
+
 export type RatingsBrokenDown = {
 	// 1-500 or 100, 200, 300, 400, 500 => /100 => 0.00 - 5.00 or 1, 2, 3, 4, 5
 	[RatingCategory.LIVING_CONDITIONS]: number

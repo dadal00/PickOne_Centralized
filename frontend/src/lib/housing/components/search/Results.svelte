@@ -5,8 +5,10 @@
 	import Badge from '$lib/housing/components/templates/Badge.svelte'
 	import { appState } from '$lib/housing/AppState.svelte'
 	import { PUBLIC_SVELTE_HOUSING_ROOT } from '$env/static/public'
+	import { HousingNameLabels, HousingFields } from '$lib/housing/models'
+	import { convertRatingToHousingLabel } from '$lib/housing/utils'
 
-	const housingData = $derived(appState.getAllHousing())
+	const housingData = $derived(appState.getHousingHits())
 
 	const filteredHousing = $derived(housingData)
 </script>
@@ -29,25 +31,29 @@
 								className="text-xl font-bold text-gray-900 group-hover:text-yellow-700 transition-colors dark:text-gray-100 dark:group-hover:text-yellow-400"
 								cardPiece="cardTitle"
 							>
-								{housing.name}
+								{HousingNameLabels[housing[HousingFields.ID]]}
 							</CardPiece>
 							<Badge
 								className="bg-white/90 text-gray-900 font-semibold shadow-sm ml-2 dark:bg-gray-700 dark:text-gray-200"
 							>
-								{housing.priceRangeSymbol}
+								{housing[HousingFields.COST_SYMBOL]}
 							</Badge>
 						</div>
-						<p class="text-sm text-gray-500 dark:text-gray-400 font-medium">{housing.type}</p>
+						<p class="text-sm text-gray-500 dark:text-gray-400 font-medium">
+							{housing[HousingFields.CAMPUS_TYPE] + ' ' + housing[HousingFields.HOUSING_TYPE]}
+						</p>
 					</div>
 				</div>
 				<div class="flex justify-between items-center">
 					<div class="flex items-center space-x-2">
 						<Star class="h-5 w-5 fill-yellow-400 text-yellow-400" />
-						<span class="font-bold text-lg text-gray-900 dark:text-gray-100">{housing.rating}</span>
+						<span class="font-bold text-lg text-gray-900 dark:text-gray-100"
+							>{convertRatingToHousingLabel(housing[HousingFields.OVERALL_RATING])}</span
+						>
 					</div>
 					<div class="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
 						<Users class="h-4 w-4" />
-						<span>{housing.reviewCount} reviews</span>
+						<span>{housing[HousingFields.REVIEW_COUNT]} reviews</span>
 					</div>
 				</div>
 			</CardPiece>

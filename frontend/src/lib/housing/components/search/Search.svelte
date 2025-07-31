@@ -18,7 +18,6 @@
 	]
 	type Sorting = (typeof sortingOptions)[number]
 	const sortingSelect = new Select<Sorting['value']>()
-	// let typeFilter = $derived(select.value)
 </script>
 
 <div
