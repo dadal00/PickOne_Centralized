@@ -207,6 +207,7 @@ pub fn init_housing_settings() -> Settings {
             housing::WALK_TIME_MINS,
             housing::COST_MIN,
             housing::COST_MAX,
+            housing::REVIEW_COUNT,
         ])
         .with_typo_tolerance(TypoToleranceSettings {
             enabled: Some(true),

@@ -12,7 +12,7 @@ pub mod columns {
         pub const ID: &str = "id";
         pub const OVERALL_RATING: &str = "overall_rating";
         pub const _RATINGS: &str = "ratings";
-        pub const _REVIEW_COUNT: &str = "review_count";
+        pub const REVIEW_COUNT: &str = "review_count";
         pub const HOUSING_TYPE: &str = "housing_type";
         pub const CAMPUS_TYPE: &str = "campus_type";
         pub const WALK_TIME_MINS: &str = "walk_time_mins";
