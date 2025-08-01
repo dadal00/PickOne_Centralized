@@ -1,14 +1,4 @@
-import { toast } from '@zerodevx/svelte-toast'
-import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
-
-export function cn(...inputs: ClassValue[]) {
-	return twMerge(clsx(...inputs))
-}
-
-export function bindNumber(payload: number, min: number, max: number): number {
-	return Math.min(max, Math.max(min, payload))
-}
+import { bindNumber } from './utils'
 
 export function convertRatingToBase5(rating: number): number {
 	return bindNumber(rating, 0, 500) / 100.0
@@ -41,13 +31,6 @@ export function convertCost(costMin: number, costMax: number): string {
 
 export function walkToWALC(address: string): string {
 	return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(address)}&destination=WALC,+West+Lafayette,+IN&travelmode=walking`
-}
-
-export function copy(text: string) {
-	navigator.clipboard
-		.writeText(text)
-		.then(() => toast.push('Copied!'))
-		.catch(() => toast.push('Failed to copy'))
 }
 
 export function convertDate(datePreFormat: string): string {

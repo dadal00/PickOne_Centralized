@@ -3,7 +3,7 @@
 	import TabPiece from '$lib/housing/components/templates/TabPiece.svelte'
 	import Reviews from '$lib/housing/components/housing/subcomponents/Reviews.svelte'
 	import SearchComponent from '$lib/housing/components/search/Search.svelte'
-	import { type Housing } from '$lib/housing/models'
+	import { type Housing } from '$lib/housing/models/housing'
 
 	const tabs = [
 		{ value: 'overview', label: 'Overview' },

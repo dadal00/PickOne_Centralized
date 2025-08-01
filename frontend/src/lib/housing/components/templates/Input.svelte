@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from '$lib/housing/utils'
+	import { cn } from '$lib/housing/helpers/utils'
 
 	let {
 		type = 'text',
@@ -11,7 +11,7 @@
 		type?: string
 		className?: string
 		disabled?: boolean
-		query: string
+		query?: string
 		placeholder: string
 	}>()
 </script>

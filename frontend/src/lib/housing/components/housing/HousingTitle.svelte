@@ -3,8 +3,14 @@
 	import CardPiece from '../templates/CardPiece.svelte'
 	import Button from '../templates/Button.svelte'
 	import { PUBLIC_SVELTE_HOUSING_ROOT } from '$env/static/public'
-	import { HousingFields, HousingNameLabels, type Housing } from '$lib/housing/models'
-	import { convertCost, convertRatingToHousingLabel, copy, walkToWALC } from '$lib/housing/utils'
+	import { HousingFields, type Housing } from '$lib/housing/models/housing'
+	import { copy } from '$lib/housing/helpers/utils'
+	import {
+		convertCost,
+		convertRatingToHousingLabel,
+		walkToWALC
+	} from '$lib/housing/helpers/housing'
+	import { HousingNameLabels } from '$lib/housing/models/housingNames'
 
 	const { housing } = $props<{
 		housing: Housing

@@ -4,10 +4,21 @@
 	import Button from '$lib/housing/components/templates/Button.svelte'
 	import CardPiece from '$lib/housing/components/templates/CardPiece.svelte'
 	import { ArrowRight, Star } from '@lucide/svelte'
-	import { HousingFields, HousingNameLabels } from '$lib/housing/models'
-	import { convertRatingToHousingLabel } from '$lib/housing/utils'
+	import { defaultHousingSortBy, HousingFields, type HousingID } from '$lib/housing/models/housing'
+	import { HousingNameLabels } from '$lib/housing/models/housingNames'
+	import { convertRatingToHousingLabel } from '$lib/housing/helpers/housing'
+	import { onMount } from 'svelte'
+	import { housingSearch } from '$lib/housing/meiliClient'
 
+	/*
+		$derive will load in housing options once search is done
+	*/
 	const featuredHousing = $derived(appState.sampleHousing(3))
+
+	onMount(() => {
+		// Run a default search when user loads up website
+		housingSearch('', '', '', '', defaultHousingSortBy, 0)
+	})
 </script>
 
 <section class="py-20 px-4 sm:px-6 lg:px-8">
@@ -33,7 +44,7 @@
 									className="text-2xl font-bold text-gray-900 group-hover:text-yellow-700 transition-colors mb-2 dark:text-gray-100 dark:group-hover:text-yellow-400"
 									cardPiece="cardTitle"
 								>
-									{HousingNameLabels[housing[HousingFields.ID]]}
+									{HousingNameLabels[housing[HousingFields.ID] as HousingID]}
 								</CardPiece>
 								<p class="text-sm text-gray-500 dark:text-gray-400 font-medium">
 									{housing[HousingFields.CAMPUS_TYPE] + ' ' + housing[HousingFields.HOUSING_TYPE]}

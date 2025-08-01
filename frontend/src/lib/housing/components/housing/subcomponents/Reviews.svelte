@@ -2,8 +2,14 @@
 	import { appState } from '$lib/housing/AppState.svelte'
 	import { Calendar, Star, ThumbsDown, ThumbsUp } from '@lucide/svelte'
 	import CardPiece from '../../templates/CardPiece.svelte'
-	import { HousingFields, RatingCategoryIterable, ReviewFields } from '$lib/housing/models'
-	import { convertDate, convertRatingToBase5, convertRatingToReviewLabel } from '$lib/housing/utils'
+	import { RatingCategoryIterable } from '$lib/housing/models/general'
+	import { HousingFields } from '$lib/housing/models/housing'
+	import { ReviewFields } from '$lib/housing/models/reviews'
+	import {
+		convertDate,
+		convertRatingToBase5,
+		convertRatingToReviewLabel
+	} from '$lib/housing/helpers/housing'
 
 	let reviews = $derived(appState.getReviews())
 </script>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { badgeVariants } from '$lib/housing/variants/badgeVariants'
 	import type { VariantProps } from 'class-variance-authority'
-	import { cn } from '$lib/housing/utils'
+	import { cn } from '$lib/housing/helpers/utils'
 	import type { Snippet } from 'svelte'
 
 	const {

@@ -3,8 +3,26 @@
 	import HousingTitle from '$lib/housing/components/housing/HousingTitle.svelte'
 	import { appState } from '$lib/housing/AppState.svelte'
 	import Body from '$lib/housing/components/housing/Body.svelte'
+	import { onMount } from 'svelte'
+	import { housingSearch } from '$lib/housing/meiliClient'
+	import { defaultHousingSortBy, type HousingID } from '$lib/housing/models/housing'
+	import { HousingIDIterable } from '$lib/housing/models/housingNames'
 
-	let housing = $derived(appState.getHousing(page.params.id))
+	/*
+		$derive will load in housing even if does not exist initially
+		- such as when the loadHousing finishes in onMount
+	*/
+	let housing = $derived(appState.fetchHousing(page.params.id!))
+
+	onMount(() => {
+		// Use a temporary variable to ensure id exists
+		const id = page.params.id
+
+		// Verify that this housing is a valid option before pulling
+		if (!housing && id && HousingIDIterable.includes(id as HousingID)) {
+			housingSearch(id, '', '', '', defaultHousingSortBy, 0)
+		}
+	})
 </script>
 
 {#if !housing}

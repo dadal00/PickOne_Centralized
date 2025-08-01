@@ -2,9 +2,9 @@
 	import { Home, Star, Users } from '@lucide/svelte'
 
 	const stats = [
-		{ label: 'Housing Options', value: '50+', icon: Home },
-		{ label: 'Student Reviews', value: '2,500+', icon: Users },
-		{ label: 'Average Rating', value: '3.9', icon: Star }
+		{ label: 'Housing Options', value: '-1', icon: Home },
+		{ label: 'Student Reviews', value: '-1', icon: Users },
+		{ label: 'Average Rating', value: '-1', icon: Star }
 	]
 </script>
 

@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { HousingFields, RatingCategoryIterable, type Housing } from '$lib/housing/models'
-	import { convertRatingToBase5 } from '$lib/housing/utils'
+	import { RatingCategoryIterable } from '$lib/housing/models/general'
+	import { HousingFields, type Housing } from '$lib/housing/models/housing'
+	import { convertRatingToBase5 } from '$lib/housing/helpers/housing'
 	import CardPiece from '../../templates/CardPiece.svelte'
 	import Progress from '../../templates/Progress.svelte'
 

@@ -8,9 +8,10 @@ import {
 	type Location
 } from './models'
 import { page } from '$app/state'
-import { PUBLIC_PAGE_SIZE, PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
+import { PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
+import { PaginatingClass } from '$lib/classes.svelte'
 
-class AppState {
+class AppState extends PaginatingClass {
 	private signedIn: boolean = $state(false)
 	private toVerify: boolean = $state(false)
 	private toVerifyForgot: boolean = $state(false)
@@ -22,13 +23,16 @@ class AppState {
 	private limited: boolean = $state(false)
 	private productLimited: boolean = $state(false)
 
+	// Query params for search
 	private query: string = $state('')
-	private totalHits: number = $state(0)
+	// Search filters
 	private itemTypeFilter: ItemType | '' = $state('')
 	private locationFilter: Location | '' = $state('')
 	private conditionFilter: Condition | '' = $state('')
+
+	// Search resuts
 	private hits: Item[] = $state([])
-	private offset: number = $state(0)
+	// Date used for marking expiration
 	private todaysDate: Date = new Date()
 
 	getPostError(): string {
@@ -49,31 +53,6 @@ class AppState {
 
 	getDate(): Date {
 		return this.todaysDate
-	}
-
-	getOffset(): number {
-		return this.offset
-	}
-
-	setOffset(offset: number): void {
-		this.offset = Math.max(
-			Math.min(
-				offset,
-				Math.floor(this.totalHits / Number(PUBLIC_PAGE_SIZE)) * Number(PUBLIC_PAGE_SIZE)
-			),
-			0
-		)
-	}
-
-	incrementOffset(): void {
-		this.offset = Math.min(
-			this.offset + Number(PUBLIC_PAGE_SIZE),
-			Math.floor(this.totalHits / Number(PUBLIC_PAGE_SIZE)) * Number(PUBLIC_PAGE_SIZE)
-		)
-	}
-
-	decrementOffset(): void {
-		this.offset = Math.max(this.offset - Number(PUBLIC_PAGE_SIZE), 0)
 	}
 
 	getLimited(): boolean {

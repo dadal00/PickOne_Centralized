@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { cn } from '$lib/housing/utils'
+	import { cn } from '$lib/housing/helpers/utils'
 	import type { Snippet } from 'svelte'
 
 	let {

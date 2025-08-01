@@ -1,23 +1,34 @@
 <script lang="ts">
-	import { ChevronDown, Funnel, Search } from '@lucide/svelte'
-	import { Select } from 'melt/builders'
+	import { Funnel, Search } from '@lucide/svelte'
+	import CustomSelect from '../templates/CustomSelect.svelte'
+	import {
+		housingFilterCampusSelect,
+		housingFilterCostSelect,
+		housingFilterTypeSelect
+	} from '$lib/housing/models/housing'
+	import { onDestroy, onMount } from 'svelte'
+	import { appState } from '$lib/housing/AppState.svelte'
 
-	let query = $state('')
+	// Query state variable to sync with central state
+	let query: string = $state('')
 
-	const housingOptions = [
-		{ value: 'all', label: 'All Housing' },
-		{ value: 'on-campus', label: 'On-Campus Dorms' },
-		{ value: 'off-campus', label: 'Off-Campus Apartments' }
-	]
-	type Housing = (typeof housingOptions)[number]
-	const housingSelect = new Select<Housing['value']>()
-	const sortingOptions = [
-		{ value: 'rating', label: 'Highly Rated' },
-		{ value: 'reviews', label: 'Most Reviews' },
-		{ value: 'name', label: 'Name A-Z' }
-	]
-	type Sorting = (typeof sortingOptions)[number]
-	const sortingSelect = new Select<Sorting['value']>()
+	onMount(() => {
+		console.log(appState.getHousingTypeFilter())
+
+		const fullQuery = appState.getFullHousingQuery()
+
+		query = fullQuery.query
+	})
+
+	$effect(() => {
+		appState.setHousingQuery(query)
+	})
+
+	onDestroy(() => {
+		appState.setHousingQuery('')
+
+		appState.setOffset(0)
+	})
 </script>
 
 <div
@@ -27,8 +38,8 @@
 		<Funnel class="h-5 w-5 text-yellow-600" />
 		<h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Search & Filter</h2>
 	</div>
-	<div class="grid grid-cols-1 md:grid-cols-4 gap-4 flex items-center">
-		<div class="md:col-span-2">
+	<div class="flex flex-wrap items-center gap-4">
+		<div class="md:col-span-2 flex-grow">
 			<div class="relative">
 				<Search class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
 				<input
@@ -39,57 +50,20 @@
 				/>
 			</div>
 		</div>
-
-		<button
-			{...housingSelect.trigger}
-			class="flex justify-between items-center rounded-xl border border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 px-3 py-2 w-full text-left"
-		>
-			{housingOptions.find((o) => o.value === housingSelect.value)?.label ??
-				'Select a housing type'}
-			<ChevronDown class="h-4 w-4 opacity-50 right-2" />
-		</button>
-
-		<div
-			{...housingSelect.content}
-			class="dark:bg-gray-800 dark:border-gray-700 rounded-md border bg-white mt-1 max-h-60 overflow-auto shadow-lg z-50"
-		>
-			{#each housingOptions as option}
-				<div
-					{...housingSelect.getOption(option.value)}
-					class="cursor-pointer select-none px-3 py-2 text-sm rounded-sm text-gray-900 dark:text-gray-100 hover:bg-yellow-300 dark:hover:bg-yellow-600"
-				>
-					{#if housingSelect.value === option.value}
-						<span class="inline-block mr-2 text-yellow-600 dark:text-yellow-300">✓</span>
-					{/if}
-					{option.label}
-				</div>
-			{/each}
-		</div>
-
-		<button
-			{...sortingSelect.trigger}
-			class="flex justify-between items-center rounded-xl border border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 px-3 py-2 w-full text-left"
-		>
-			{sortingOptions.find((o) => o.value === sortingSelect.value)?.label ??
-				'Select a housing type'}
-			<ChevronDown class="h-4 w-4 opacity-50 right-2" />
-		</button>
-
-		<div
-			{...sortingSelect.content}
-			class="dark:bg-gray-800 dark:border-gray-700 rounded-md border bg-white mt-1 max-h-60 overflow-auto shadow-lg z-50"
-		>
-			{#each sortingOptions as option}
-				<div
-					{...sortingSelect.getOption(option.value)}
-					class="cursor-pointer select-none px-3 py-2 text-sm rounded-sm text-gray-900 dark:text-gray-100 hover:bg-yellow-300 dark:hover:bg-yellow-600"
-				>
-					{#if sortingSelect.value === option.value}
-						<span class="inline-block mr-2 text-yellow-600 dark:text-yellow-300">✓</span>
-					{/if}
-					{option.label}
-				</div>
-			{/each}
-		</div>
+		<CustomSelect
+			selectOptions={housingFilterTypeSelect}
+			getAction={appState.getHousingTypeFilter.bind(appState)}
+			setAction={appState.setHousingTypeFilter.bind(appState)}
+		/>
+		<CustomSelect
+			selectOptions={housingFilterCampusSelect}
+			getAction={appState.getCampusTypeFilter.bind(appState)}
+			setAction={appState.setCampusTypeFilter.bind(appState)}
+		/>
+		<CustomSelect
+			selectOptions={housingFilterCostSelect}
+			getAction={appState.getCostSymbolFilter.bind(appState)}
+			setAction={appState.setCostSymbolFilter.bind(appState)}
+		/>
 	</div>
 </div>
