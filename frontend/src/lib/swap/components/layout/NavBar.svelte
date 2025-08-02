@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { appState } from '$lib/swap/AppState.svelte'
+	import { appState } from '$lib/swap/app-state.svelte'
 	import { Status } from '$lib/swap/models'
 	import { PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
 </script>

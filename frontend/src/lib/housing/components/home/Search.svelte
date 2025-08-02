@@ -4,7 +4,7 @@
 	import Button from '../templates/Button.svelte'
 	import Input from '../templates/Input.svelte'
 	import { goto } from '$app/navigation'
-	import { appState } from '$lib/housing/AppState.svelte'
+	import { appState } from '$lib/housing/app-state.svelte'
 	import type { CampusType, HousingType } from '$lib/housing/models/housing'
 
 	let query: string = $state('')

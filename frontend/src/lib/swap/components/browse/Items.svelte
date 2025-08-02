@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { appState } from '$lib/swap/AppState.svelte'
+	import { appState } from '$lib/swap/app-state.svelte'
 	import ItemCard from '$lib/swap/components/ItemCard.svelte'
-	import { search } from '$lib/swap/meiliClient'
+	import { search } from '$lib/swap/meili-client'
 	import { ItemFields } from '$lib/swap/models'
 	import { page } from '$app/state'
 

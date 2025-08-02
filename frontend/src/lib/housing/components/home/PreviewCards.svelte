@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { PUBLIC_SVELTE_HOUSING_ROOT } from '$env/static/public'
-	import { appState } from '$lib/housing/AppState.svelte'
+	import { appState } from '$lib/housing/app-state.svelte'
 	import Button from '$lib/housing/components/templates/Button.svelte'
 	import CardPiece from '$lib/housing/components/templates/CardPiece.svelte'
 	import { ArrowRight, Star } from '@lucide/svelte'
-	import { defaultHousingSortBy, HousingFields, type HousingID } from '$lib/housing/models/housing'
-	import { HousingNameLabels } from '$lib/housing/models/housingNames'
+	import { defaultHousingSortBy, type HousingID } from '$lib/housing/models/housing'
+	import { HousingFields } from '$lib/housing/constants/housing'
+	import { HousingNameLabels } from '$lib/housing/constants/housing'
 	import { convertRatingToHousingLabel } from '$lib/housing/helpers/housing'
 	import { onMount } from 'svelte'
-	import { housingSearch } from '$lib/housing/meiliClient'
+	import { housingSearch } from '$lib/housing/meili-client'
 
 	/*
 		$derive will load in housing options once search is done

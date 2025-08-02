@@ -1,9 +1,9 @@
 <script lang="ts">
 	import * as d3 from 'd3'
 	import { onDestroy, onMount } from 'svelte'
-	import { calculateDimensions, chart_init, update_chart } from '../helpers/chartHelpers'
+	import { calculateDimensions, chart_init, update_chart } from '../helpers/chart'
 	import { type chartConfig, type ChartData } from '../models'
-	import { chartState } from '../ChartState.svelte'
+	import { chartState } from '../chart-state.svelte'
 
 	const data: ChartData[] = $derived(chartState.getData())
 

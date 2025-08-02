@@ -1,13 +1,16 @@
 <script lang="ts">
 	import { Funnel, Search } from '@lucide/svelte'
-	import CustomSelect from '../templates/CustomSelect.svelte'
+	import SearchSelect from '../templates/SearchSelect.svelte'
 	import {
 		housingFilterCampusSelect,
 		housingFilterCostSelect,
-		housingFilterTypeSelect
+		housingFilterTypeSelect,
+		housingSortDirectionSelect,
+		housingSortSelect
 	} from '$lib/housing/models/housing'
 	import { onDestroy, onMount } from 'svelte'
-	import { appState } from '$lib/housing/AppState.svelte'
+	import { appState } from '$lib/housing/app-state.svelte'
+	import { PUBLIC_HOUSING_MIN_CHARS } from '$env/static/public'
 
 	// Query state variable to sync with central state
 	let query: string = $state('')
@@ -15,9 +18,7 @@
 	onMount(() => {
 		console.log(appState.getHousingTypeFilter())
 
-		const fullQuery = appState.getFullHousingQuery()
-
-		query = fullQuery.query
+		query = appState.getHousingQuery()
 	})
 
 	$effect(() => {
@@ -25,9 +26,7 @@
 	})
 
 	onDestroy(() => {
-		appState.setHousingQuery('')
-
-		appState.setOffset(0)
+		appState.clearFullHousingQuery()
 	})
 </script>
 
@@ -47,23 +46,34 @@
 					bind:value={query}
 					placeholder="Search housing..."
 					class={'flex h-10 w-full border border-gray-200 bg-background px-3 pl-12 py-3 text-base md:text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground rounded-xl focus-visible:outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200'}
+					maxlength={Number(PUBLIC_HOUSING_MIN_CHARS)}
 				/>
 			</div>
 		</div>
-		<CustomSelect
+		<SearchSelect
 			selectOptions={housingFilterTypeSelect}
 			getAction={appState.getHousingTypeFilter.bind(appState)}
 			setAction={appState.setHousingTypeFilter.bind(appState)}
 		/>
-		<CustomSelect
+		<SearchSelect
 			selectOptions={housingFilterCampusSelect}
 			getAction={appState.getCampusTypeFilter.bind(appState)}
 			setAction={appState.setCampusTypeFilter.bind(appState)}
 		/>
-		<CustomSelect
+		<SearchSelect
 			selectOptions={housingFilterCostSelect}
 			getAction={appState.getCostSymbolFilter.bind(appState)}
 			setAction={appState.setCostSymbolFilter.bind(appState)}
+		/>
+		<SearchSelect
+			selectOptions={housingSortSelect}
+			getAction={appState.getHousingSortCategory.bind(appState)}
+			setAction={appState.setHousingSortCategory.bind(appState)}
+		/>
+		<SearchSelect
+			selectOptions={housingSortDirectionSelect}
+			getAction={appState.getHousingSortDirection.bind(appState)}
+			setAction={appState.setHousingSortDirection.bind(appState)}
 		/>
 	</div>
 </div>

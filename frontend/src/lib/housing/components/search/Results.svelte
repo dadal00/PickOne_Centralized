@@ -3,12 +3,13 @@
 	import CardPiece from '$lib/housing/components/templates/CardPiece.svelte'
 	import { Search, Star, Users } from '@lucide/svelte'
 	import Badge from '$lib/housing/components/templates/Badge.svelte'
-	import { appState } from '$lib/housing/AppState.svelte'
+	import { appState } from '$lib/housing/app-state.svelte'
 	import { PUBLIC_SVELTE_HOUSING_ROOT } from '$env/static/public'
-	import { HousingFields, type HousingID } from '$lib/housing/models/housing'
+	import { type HousingID } from '$lib/housing/models/housing'
+	import { HousingFields } from '$lib/housing/constants/housing'
 	import { convertRatingToHousingLabel } from '$lib/housing/helpers/housing'
-	import { HousingNameLabels } from '$lib/housing/models/housingNames'
-	import { housingSearch } from '$lib/housing/meiliClient'
+	import { HousingNameLabels } from '$lib/housing/constants/housing'
+	import { housingSearch } from '$lib/housing/meili-client'
 
 	const housingHits = $derived(appState.getHousingHits())
 

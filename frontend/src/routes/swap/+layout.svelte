@@ -2,7 +2,7 @@
 	import NavBar from '$lib/swap/components/layout/NavBar.svelte'
 	import Footer from '$lib/swap/components/layout/Footer.svelte'
 	import PostButton from '$lib/swap/components/layout/PostButton.svelte'
-	import { appState } from '$lib/swap/AppState.svelte'
+	import { appState } from '$lib/swap/app-state.svelte.js'
 	import { Status } from '$lib/swap/models'
 	import { page } from '$app/state'
 

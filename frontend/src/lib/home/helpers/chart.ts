@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 import { baseChartConfig, websiteMeta, type chartConfig, type ChartData } from '../models'
-import { chartState } from '../ChartState.svelte'
+import { chartState } from '../chart-state.svelte'
 import { format_number } from './utils'
 
 export function chart_init(

@@ -3,14 +3,16 @@
 	import CardPiece from '../templates/CardPiece.svelte'
 	import Button from '../templates/Button.svelte'
 	import { PUBLIC_SVELTE_HOUSING_ROOT } from '$env/static/public'
-	import { HousingFields, type Housing } from '$lib/housing/models/housing'
+	import { type Housing } from '$lib/housing/models/housing'
+	import { HousingFields } from '$lib/housing/constants/housing'
 	import { copy } from '$lib/housing/helpers/utils'
 	import {
 		convertCost,
 		convertRatingToHousingLabel,
 		walkToWALC
 	} from '$lib/housing/helpers/housing'
-	import { HousingNameLabels } from '$lib/housing/models/housingNames'
+	import { HousingNameLabels } from '$lib/housing/constants/housing'
+	import { appState } from '$lib/housing/app-state.svelte'
 
 	const { housing } = $props<{
 		housing: Housing
@@ -70,6 +72,7 @@
 				<a href={PUBLIC_SVELTE_HOUSING_ROOT + '/submit-review'}>
 					<Button
 						className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all"
+						action={() => appState.setWriteReviewHousing(housing[HousingFields.ID])}
 					>
 						Write a Review
 						<ArrowRight class="h-4 w-4 ml-2" />

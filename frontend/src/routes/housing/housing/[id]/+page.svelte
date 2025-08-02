@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/state'
 	import HousingTitle from '$lib/housing/components/housing/HousingTitle.svelte'
-	import { appState } from '$lib/housing/AppState.svelte'
+	import { appState } from '$lib/housing/app-state.svelte'
 	import Body from '$lib/housing/components/housing/Body.svelte'
 	import { onMount } from 'svelte'
-	import { housingSearch } from '$lib/housing/meiliClient'
+	import { housingSearch } from '$lib/housing/meili-client'
 	import { defaultHousingSortBy, type HousingID } from '$lib/housing/models/housing'
-	import { HousingIDIterable } from '$lib/housing/models/housingNames'
+	import { HousingIDIterable } from '$lib/housing/constants/housing'
 
 	/*
 		$derive will load in housing even if does not exist initially

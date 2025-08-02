@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { PUBLIC_HOUSING_MIN_CHARS } from '$env/static/public'
 	import { cn } from '$lib/housing/helpers/utils'
 
 	let {
@@ -25,4 +26,5 @@
 		className
 	)}
 	bind:value={query}
+	maxlength={Number(PUBLIC_HOUSING_MIN_CHARS)}
 />

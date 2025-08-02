@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { appState } from '$lib/housing/AppState.svelte'
+	import { appState } from '$lib/housing/app-state.svelte'
 	import { Calendar, Star, ThumbsDown, ThumbsUp } from '@lucide/svelte'
 	import CardPiece from '../../templates/CardPiece.svelte'
 	import { RatingCategoryIterable } from '$lib/housing/models/general'
-	import { HousingFields } from '$lib/housing/models/housing'
+	import { HousingFields } from '$lib/housing/constants/housing'
 	import { ReviewFields } from '$lib/housing/models/reviews'
 	import {
 		convertDate,

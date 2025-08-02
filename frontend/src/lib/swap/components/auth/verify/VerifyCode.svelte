@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { PUBLIC_CODE_LENGTH } from '$env/static/public'
-	import { appState } from '$lib/swap/AppState.svelte'
+	import { appState } from '$lib/swap/app-state.svelte'
 	import { verify, verify_forget, resend } from '$lib/swap/helpers/auth'
 	import type { VerifcationType } from '$lib/swap/models'
 	import { onDestroy, onMount } from 'svelte'

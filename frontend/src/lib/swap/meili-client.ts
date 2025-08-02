@@ -9,7 +9,7 @@ import {
 	type ItemType,
 	type Location
 } from './models'
-import { appState } from './AppState.svelte'
+import { appState } from './app-state.svelte'
 
 const client = new Meilisearch({
 	host: PUBLIC_MEILI_URL,

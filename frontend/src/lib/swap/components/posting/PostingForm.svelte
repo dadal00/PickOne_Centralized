@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation'
 	import { PUBLIC_SWAP_BACKEND_PATH, PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
-	import { appState } from '$lib/swap/AppState.svelte'
+	import { appState } from '$lib/swap/app-state.svelte'
 	import { type Item } from '$lib/swap/models'
 	import { onDestroy, onMount } from 'svelte'
 	import ConditionField from './fields/ConditionField.svelte'

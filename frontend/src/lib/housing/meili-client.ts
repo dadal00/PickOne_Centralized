@@ -1,11 +1,9 @@
 import { PUBLIC_MEILI_URL, PUBLIC_PAGE_SIZE } from '$env/static/public'
 import { env } from '$env/dynamic/public'
 import { Meilisearch } from 'meilisearch'
-import { appState } from './AppState.svelte'
+import { appState } from './app-state.svelte'
 import { ReviewFields, type Review, type ReviewRating, type ReviewSortBy } from './models/reviews'
 import {
-	HousingFields,
-	HousingTableName,
 	type CampusType,
 	type CostSymbol,
 	type Housing,
@@ -13,6 +11,7 @@ import {
 	type HousingSortBy,
 	type HousingType
 } from './models/housing'
+import { HousingFields, HousingTableName } from './constants/housing'
 
 const client = new Meilisearch({
 	host: PUBLIC_MEILI_URL,

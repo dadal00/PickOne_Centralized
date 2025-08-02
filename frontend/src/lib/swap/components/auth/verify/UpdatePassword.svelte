@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { update } from '$lib/swap/helpers/auth'
 	import { PUBLIC_MAX_CHARS, PUBLIC_MIN_PASSWORD_LENGTH } from '$env/static/public'
-	import { appState } from '$lib/swap/AppState.svelte'
+	import { appState } from '$lib/swap/app-state.svelte'
 
 	let new_password: string = $state('')
 </script>

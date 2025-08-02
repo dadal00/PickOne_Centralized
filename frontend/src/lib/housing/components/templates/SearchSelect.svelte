@@ -13,7 +13,7 @@
 
 	const newSelect = new Select<SelectType['value']>({
 		value: getAction(),
-		onValueChange: ({ value }) => {
+		onValueChange: (value) => {
 			setAction(value)
 		},
 		sameWidth: false
@@ -25,7 +25,7 @@
 	class="flex justify-between items-center rounded-xl border border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 px-3 py-2 text-left"
 >
 	{(selectOptions as SelectOptions[]).find((o) => o.value === newSelect.value)?.label ??
-		'Select a housing type'}
+		'Select one'}
 	<ChevronDown class="ml-3 h-4 w-4 opacity-50 right-2" />
 </button>
 

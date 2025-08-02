@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { PUBLIC_MAX_CHARS } from '$env/static/public'
-	import { appState } from '$lib/swap/AppState.svelte'
+	import { appState } from '$lib/swap/app-state.svelte'
 	import { ItemFields, type Condition, type ItemType, type Location } from '$lib/swap/models'
 	import { onDestroy, onMount } from 'svelte'
 	import SearchFilters from './SearchFilters.svelte'
