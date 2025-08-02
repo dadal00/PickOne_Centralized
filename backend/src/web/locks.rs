@@ -7,7 +7,10 @@ use super::{
     verify::hash_password,
 };
 use crate::{
-    AppError, AppState,
+    AppError,
+    AppError::HttpResponseBack,
+    AppState,
+    error::HttpErrorResponse::Unauthorized,
     microservices::redis::{insert_id, remove_id, try_get},
 };
 use chrono::{Duration as chronoDuration, Utc};
@@ -202,9 +205,9 @@ pub async fn check_forgot_locks(
     )
     .await?
     {
-        return Err(AppError::Unauthorized(
+        return Err(HttpResponseBack(Unauthorized(
             "Try again in 30 minutes".to_string(),
-        ));
+        )));
     }
 
     Ok(())
@@ -245,9 +248,9 @@ pub async fn prepare_resend_and_check_locks(
     )
     .await?
     {
-        return Err(AppError::Unauthorized(
+        return Err(HttpResponseBack(Unauthorized(
             "Try again in 30 minutes".to_string(),
-        ));
+        )));
     }
 
     Ok(RedisAccount {
@@ -279,9 +282,9 @@ pub async fn check_auth_locks(
     )
     .await?
     {
-        return Err(AppError::Unauthorized(
+        return Err(HttpResponseBack(Unauthorized(
             "Try again in 30 minutes".to_string(),
-        ));
+        )));
     }
 
     if payload.action != Action::Forgot {
@@ -298,7 +301,9 @@ pub async fn check_auth_locks(
     )
     .await?;
 
-    Err(AppError::Unauthorized("Invalid Credentials".to_string()))
+    Err(HttpResponseBack(Unauthorized(
+        "Invalid Credentials".to_string(),
+    )))
 }
 
 pub async fn increment_lock_key(
@@ -310,7 +315,7 @@ pub async fn increment_lock_key(
     max_attempts: &u8,
 ) -> Result<(), AppError> {
     let _count: () = FAILED_ATTEMPTS_SCRIPT
-        .key(format!("{}:{}:{}", website_path, key, email))
+        .key(format!("{website_path}:{key}:{email}"))
         .arg(locked_duration_seconds)
         .arg(max_attempts)
         .invoke_async(&mut state.redis_connection_manager.clone())
@@ -326,12 +331,7 @@ pub async fn is_redis_locked(
     key_id: &str,
     threshold: &u8,
 ) -> Result<bool, AppError> {
-    match try_get(
-        state,
-        &format!("{}:{}:{}", website_path, key_prefix, key_id),
-    )
-    .await?
-    {
+    match try_get(state, &format!("{website_path}:{key_prefix}:{key_id}")).await? {
         Some(attempts) => Ok(attempts.parse::<u8>()? >= *threshold),
         None => Ok(false),
     }
@@ -345,7 +345,7 @@ pub async fn is_temporarily_locked(
     ttl: i64,
 ) -> Result<bool, AppError> {
     let result: Option<String> = redis::cmd("SET")
-        .arg(format!("{}:{}:{}", website_path, key, id))
+        .arg(format!("{website_path}:{key}:{id}"))
         .arg("1")
         .arg("NX")
         .arg("EX")

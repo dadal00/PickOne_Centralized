@@ -97,7 +97,7 @@ fn build_cookie(
     ttl_seconds: i64,
 ) -> CookieBuilder<'static> {
     Cookie::build((key.to_owned(), value.to_owned()))
-        .path(format!("/{}", website_path))
+        .path(format!("/{website_path}"))
         .http_only(true)
         .secure(true)
         .same_site(Strict)

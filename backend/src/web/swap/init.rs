@@ -10,6 +10,7 @@ use crate::{
         meilisearch::{add_items, clear_index},
     },
 };
+use anyhow::Result as anyResult;
 use meilisearch_sdk::{
     client::*,
     settings::{MinWordSizeForTypos, Settings, TypoToleranceSettings},
@@ -22,7 +23,7 @@ pub async fn init_swap(
     database_session: Arc<Session>,
     database_queries: &DatabaseQueries,
     meili_client: Arc<Client>,
-) -> Result<JoinHandle<Result<(), AppError>>, AppError> {
+) -> Result<JoinHandle<anyResult<()>>, AppError> {
     meili_client
         .index(tables::ITEMS)
         .set_settings(&init_item_settings())
@@ -39,7 +40,7 @@ async fn reindex(
     database_session: Arc<Session>,
     database_queries: DatabaseQueries,
     meili_client: Arc<Client>,
-) -> Result<(), AppError> {
+) -> anyResult<()> {
     let mut paging_state = PagingState::start();
 
     clear_index(meili_client.clone(), tables::ITEMS).await?;

@@ -5,7 +5,8 @@ use super::{
     schema::{KEYSPACE, columns::reviews, tables},
 };
 use crate::{
-    AppError, AppState,
+    AppState,
+    error::ScyllaError,
     microservices::database::CREATE_KEYSPACE,
     utilities::{convert_i8_to_u8, convert_i16_to_u16, convert_i64_to_u64},
 };
@@ -29,7 +30,7 @@ pub struct Housing {
 }
 
 impl Housing {
-    pub async fn init(session: &Session) -> Result<Self, AppError> {
+    pub async fn init(session: &Session) -> Result<Self, ScyllaError> {
         Ok(Self {
             get_all_reviews: session
                 .prepare(
@@ -114,7 +115,7 @@ impl Housing {
     }
 }
 
-pub async fn create_housing_tables(session: &Session) -> Result<(), AppError> {
+pub async fn create_housing_tables(session: &Session) -> Result<(), ScyllaError> {
     session
         .query_unpaged(CREATE_KEYSPACE.replace("__KEYSPACE__", KEYSPACE), &[])
         .await?;
@@ -230,7 +231,7 @@ pub fn convert_db_reviews(row_vec: &Vec<ReviewRow>) -> Vec<Review> {
         .collect()
 }
 
-pub async fn insert_review(state: Arc<AppState>, review: ReviewPayload) -> Result<(), AppError> {
+pub async fn insert_review(state: Arc<AppState>, review: ReviewPayload) -> Result<(), ScyllaError> {
     let fallback_page_state = PagingState::start();
     let id = Uuid::new_v4();
     let housing_id = review.housing_id;
@@ -272,7 +273,7 @@ pub async fn insert_review(state: Arc<AppState>, review: ReviewPayload) -> Resul
 pub async fn update_thumbs(
     state: Arc<AppState>,
     thumbs_map: ThumbsDeltaMap,
-) -> Result<(), AppError> {
+) -> Result<(), ScyllaError> {
     let mut batch: Batch = Default::default();
     let mut batch_values = Vec::new();
 
@@ -292,7 +293,7 @@ pub async fn update_thumbs(
     Ok(())
 }
 
-pub async fn get_housing_id(state: Arc<AppState>, review_id: &Uuid) -> Result<String, AppError> {
+pub async fn get_housing_id(state: Arc<AppState>, review_id: &Uuid) -> Result<String, ScyllaError> {
     let fallback_page_state = PagingState::start();
 
     let (returned_rows, _) = state
@@ -312,7 +313,7 @@ pub async fn get_housing_id(state: Arc<AppState>, review_id: &Uuid) -> Result<St
         .to_string())
 }
 
-pub async fn delete_housing_id(state: Arc<AppState>, review_id: &Uuid) -> Result<(), AppError> {
+pub async fn delete_housing_id(state: Arc<AppState>, review_id: &Uuid) -> Result<(), ScyllaError> {
     let fallback_page_state = PagingState::start();
 
     state

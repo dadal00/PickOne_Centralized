@@ -6,6 +6,7 @@ use super::{
 };
 use crate::{
     AppError, AppState, RedisAction, ScyllaCDCParams, WebsitePath,
+    error::ScyllaError,
     microservices::{
         cdc::utilities::{get_cdc_date, get_cdc_id, get_cdc_text, get_cdc_u8},
         database::DatabaseQueries,
@@ -68,7 +69,7 @@ pub fn convert_cron_items(row_vec: &[CronItemRow]) -> Vec<CronItem> {
 pub async fn expire_ttl(
     database_session: Arc<Session>,
     database_queries: &DatabaseQueries,
-) -> Result<(), AppError> {
+) -> Result<(), ScyllaError> {
     let mut paging_state = PagingState::start();
 
     let mut batch: Batch = Default::default();

@@ -8,6 +8,7 @@ use crate::{
     },
     web::swap::cdc::{expire_ttl, spawn_ttl_task},
 };
+use anyhow::Result as anyResult;
 use meilisearch_sdk::client::Client;
 use redis::aio::ConnectionManager;
 use scylla::client::session::Session;
@@ -26,8 +27,8 @@ impl AppState {
     pub async fn new() -> Result<
         (
             Arc<Self>,
-            JoinHandle<Result<(), AppError>>,
-            JoinHandle<Result<(), AppError>>,
+            JoinHandle<anyResult<()>>,
+            JoinHandle<anyResult<()>>,
         ),
         AppError,
     > {

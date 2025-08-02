@@ -37,7 +37,7 @@ pub async fn insert_user_photo_bytes(
     photo_bytes: &[u8],
 ) -> Result<u8, AppError> {
     let length: u8 = INSERT_USER_PHOTO_BYTES_SCRIPT
-        .key(format!("{}:{}", key_prefix, user_id))
+        .key(format!("{key_prefix}:{user_id}"))
         .arg(photo_bytes)
         .arg(state.config.bot.num_pictures)
         .arg(state.config.bot.pictures_ttl)
@@ -56,11 +56,8 @@ pub async fn insert_formatted_photo(
     user_id: &str,
 ) -> Result<(), AppError> {
     let _: () = INSERT_FORMATTED_PHOTO_SCRIPT
-        .key(format!("{}:{}", key_prefix, photo_id))
-        .key(format!(
-            "{}:{}:{}",
-            key_prefix, key_secondary_prefix, user_id
-        ))
+        .key(format!("{key_prefix}:{photo_id}"))
+        .key(format!("{key_prefix}:{key_secondary_prefix}:{user_id}"))
         .arg(user_id)
         .arg(photo_id)
         .arg(photo_bytes)
@@ -80,7 +77,7 @@ pub async fn get_num_photos(
     Ok(state
         .redis_connection_manager
         .clone()
-        .llen(format!("{}:{}", key_prefix, user_id))
+        .llen(format!("{key_prefix}:{user_id}"))
         .await?
         .try_into()
         .unwrap())
@@ -92,7 +89,7 @@ pub async fn get_vector_of_bytes(
     user_id: &str,
 ) -> Result<Vec<Vec<u8>>, AppError> {
     let vector_of_bytes: Vec<Vec<u8>> = cmd("LRANGE")
-        .arg(format!("{}:{}", key_prefix, user_id))
+        .arg(format!("{key_prefix}:{user_id}"))
         .arg(0)
         .arg(-1)
         .query_async(&mut state.redis_connection_manager.clone())
@@ -107,7 +104,7 @@ pub async fn get_bytes(
     id: &str,
 ) -> Result<Option<Vec<u8>>, AppError> {
     let bytes: Option<Vec<u8>> = cmd("GET")
-        .arg(format!("{}:{}", key_prefix, id))
+        .arg(format!("{key_prefix}:{id}"))
         .query_async(&mut state.redis_connection_manager.clone())
         .await?;
 

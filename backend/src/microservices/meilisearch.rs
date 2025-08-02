@@ -21,8 +21,8 @@ pub async fn init_meilisearch(
 ) -> Result<
     (
         Arc<Client>,
-        JoinHandle<Result<(), AppError>>,
-        JoinHandle<Result<(), AppError>>,
+        JoinHandle<anyResult<()>>,
+        JoinHandle<anyResult<()>>,
     ),
     AppError,
 > {

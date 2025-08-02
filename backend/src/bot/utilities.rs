@@ -4,6 +4,7 @@ use super::{
     redis::get_num_photos,
 };
 use crate::{AppError, AppState, microservices::redis::remove_id};
+use anyhow::Result as anyResult;
 use std::sync::Arc;
 use teloxide::{prelude::*, types::FileMeta};
 
@@ -48,7 +49,7 @@ pub async fn download_user_photo(
     state: Arc<AppState>,
     msg: &Message,
     file: &FileMeta,
-) -> Result<u8, AppError> {
+) -> anyResult<u8> {
     download_photo(
         bot,
         state,

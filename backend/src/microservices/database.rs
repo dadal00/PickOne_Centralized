@@ -1,6 +1,6 @@
 use crate::{
-    AppError,
     config::try_load,
+    error::ScyllaError,
     web::{
         housing::database::{Housing, create_housing_tables},
         swap::database::{BoilerSwap, create_swap_tables},
@@ -18,7 +18,7 @@ pub struct DatabaseQueries {
 }
 
 impl DatabaseQueries {
-    pub async fn init(session: &Session) -> Result<Self, AppError> {
+    pub async fn init(session: &Session) -> Result<Self, ScyllaError> {
         Ok(Self {
             boiler_swap: BoilerSwap::init(session).await?,
             housing: Housing::init(session).await?,
@@ -26,7 +26,7 @@ impl DatabaseQueries {
     }
 }
 
-pub async fn init_database() -> Result<(Arc<Session>, DatabaseQueries), AppError> {
+pub async fn init_database() -> Result<(Arc<Session>, DatabaseQueries), ScyllaError> {
     let database_uri = try_load::<String>("RUST_DB_URI", "scylladb:9042").unwrap();
 
     let database_session: Session = SessionBuilder::new()

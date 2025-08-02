@@ -13,8 +13,7 @@ pub async fn clear_all_keys(
     let mut pipe = redis::pipe();
 
     for key in keys {
-        pipe.del(format!("{}:{}:{}", website_path, key, email))
-            .ignore();
+        pipe.del(format!("{website_path}:{key}:{email}")).ignore();
     }
 
     pipe.query_async::<()>(&mut state.redis_connection_manager.clone())

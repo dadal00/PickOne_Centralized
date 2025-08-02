@@ -7,7 +7,8 @@ use super::{
     },
 };
 use crate::{
-    AppError, AppState,
+    AppState,
+    error::ScyllaError,
     microservices::database::CREATE_KEYSPACE,
     utilities::convert_i8_to_u8,
     web::models::{RedisAccount, WebsitePath},
@@ -38,7 +39,7 @@ pub struct BoilerSwap {
 }
 
 impl BoilerSwap {
-    pub async fn init(session: &Session) -> Result<Self, AppError> {
+    pub async fn init(session: &Session) -> Result<Self, ScyllaError> {
         Ok(Self {
         get_user: session
             .prepare(format!(
@@ -172,7 +173,7 @@ impl BoilerSwap {
     }
 }
 
-pub async fn create_swap_tables(session: &Session) -> Result<(), AppError> {
+pub async fn create_swap_tables(session: &Session) -> Result<(), ScyllaError> {
     session
         .query_unpaged(CREATE_KEYSPACE.replace("__KEYSPACE__", KEYSPACE), &[])
         .await?;
@@ -257,7 +258,7 @@ pub async fn create_swap_tables(session: &Session) -> Result<(), AppError> {
     Ok(())
 }
 
-pub async fn insert_item(state: Arc<AppState>, item: ItemPayload) -> Result<Uuid, AppError> {
+pub async fn insert_item(state: Arc<AppState>, item: ItemPayload) -> Result<Uuid, ScyllaError> {
     let fallback_page_state = PagingState::start();
     let id = Uuid::new_v4();
 
@@ -325,7 +326,7 @@ pub async fn get_user(
     state: Arc<AppState>,
     email: &str,
     website_path: &WebsitePath,
-) -> Result<Option<(String, bool)>, AppError> {
+) -> Result<Option<(String, bool)>, ScyllaError> {
     is_this_for_swap(website_path);
 
     let fallback_page_state = PagingState::start();
@@ -353,7 +354,7 @@ pub async fn insert_user(
     state: Arc<AppState>,
     account: &RedisAccount,
     website_path: &WebsitePath,
-) -> Result<(), AppError> {
+) -> Result<(), ScyllaError> {
     is_this_for_swap(website_path);
 
     let fallback_page_state = PagingState::start();
@@ -383,7 +384,7 @@ pub async fn check_lock(
     state: Arc<AppState>,
     email: &str,
     website_path: &WebsitePath,
-) -> Result<Option<bool>, AppError> {
+) -> Result<Option<bool>, ScyllaError> {
     is_this_for_swap(website_path);
 
     let fallback_page_state = PagingState::start();
@@ -409,7 +410,7 @@ pub async fn update_lock(
     email: &str,
     lock: bool,
     website_path: &WebsitePath,
-) -> Result<(), AppError> {
+) -> Result<(), ScyllaError> {
     is_this_for_swap(website_path);
 
     let fallback_page_state = PagingState::start();
@@ -431,7 +432,7 @@ pub async fn unlock_account(
     email: &str,
     password_hash: &str,
     website_path: &WebsitePath,
-) -> Result<(), AppError> {
+) -> Result<(), ScyllaError> {
     is_this_for_swap(website_path);
 
     let fallback_page_state = PagingState::start();
@@ -448,7 +449,7 @@ pub async fn unlock_account(
     Ok(())
 }
 
-pub async fn insert_email(state: Arc<AppState>, id: &Uuid, email: &str) -> Result<(), AppError> {
+pub async fn insert_email(state: Arc<AppState>, id: &Uuid, email: &str) -> Result<(), ScyllaError> {
     let fallback_page_state = PagingState::start();
 
     state
@@ -463,7 +464,7 @@ pub async fn insert_email(state: Arc<AppState>, id: &Uuid, email: &str) -> Resul
     Ok(())
 }
 
-pub async fn get_email(state: Arc<AppState>, item_id: &Uuid) -> Result<String, AppError> {
+pub async fn get_email(state: Arc<AppState>, item_id: &Uuid) -> Result<String, ScyllaError> {
     let fallback_page_state = PagingState::start();
 
     let (returned_rows, _) = state
@@ -480,7 +481,7 @@ pub async fn get_email(state: Arc<AppState>, item_id: &Uuid) -> Result<String, A
     Ok(email)
 }
 
-pub async fn delete_email(state: Arc<AppState>, item_id: &Uuid) -> Result<(), AppError> {
+pub async fn delete_email(state: Arc<AppState>, item_id: &Uuid) -> Result<(), ScyllaError> {
     let fallback_page_state = PagingState::start();
 
     state

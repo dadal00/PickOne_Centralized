@@ -5,7 +5,8 @@ use super::{
     },
     redis::{get_bytes, get_vector_of_bytes, insert_formatted_photo, insert_user_photo_bytes},
 };
-use crate::{AppError, AppState};
+use crate::{AppError, AppState, error::BotError};
+use anyhow::Result as anyResult;
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -96,7 +97,7 @@ async fn get_all_photos(
     state: Arc<AppState>,
     key_prefix: &str,
     user_id: &str,
-) -> Result<Vec<DynamicImage>, AppError> {
+) -> anyResult<Vec<DynamicImage>> {
     let photos_bytes: Vec<Vec<u8>> =
         get_vector_of_bytes(state.clone(), key_prefix, user_id).await?;
 
@@ -115,8 +116,8 @@ pub async fn download_photo(
     redis_bot_action: RedisBotAction,
     user_id: &str,
     file_id: FileId,
-) -> Result<u8, AppError> {
-    insert_user_photo_bytes(
+) -> anyResult<u8> {
+    Ok(insert_user_photo_bytes(
         state.clone(),
         redis_bot_action.as_ref(),
         user_id,
@@ -127,10 +128,10 @@ pub async fn download_photo(
             })
             .await?,
     )
-    .await
+    .await?)
 }
 
-pub fn photo_to_bytes(image: &DynamicImage, format: ImageFormat) -> Result<Vec<u8>, AppError> {
+pub fn photo_to_bytes(image: &DynamicImage, format: ImageFormat) -> Result<Vec<u8>, BotError> {
     let mut bytes: Vec<u8> = Vec::new();
 
     image.write_to(&mut Cursor::new(&mut bytes), format)?;
@@ -146,14 +147,17 @@ pub async fn photo_handler(
         Some(bytes) => Ok((
             StatusCode::OK,
             JPEG_HEADER.clone(),
-            photo_to_bytes(&load_from_memory(&bytes)?, Jpeg),
+            photo_to_bytes(
+                &load_from_memory(&bytes).map_err(|e| AppError::Bot(e.into()))?,
+                Jpeg,
+            )?,
         )
             .into_response()),
         None => Ok((StatusCode::NOT_FOUND, "Not found").into_response()),
     }
 }
 
-pub fn generate_qr_bytes(link: &str) -> Result<Vec<u8>, AppError> {
+pub fn generate_qr_bytes(link: &str) -> Result<Vec<u8>, BotError> {
     photo_to_bytes(
         &DynamicImage::ImageLuma8(
             QrCode::new(link)

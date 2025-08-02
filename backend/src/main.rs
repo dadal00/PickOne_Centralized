@@ -18,6 +18,7 @@ use crate::{
         swap::{cdc::start_swap_cdc, handlers::post_item_handler},
     },
 };
+use anyhow::Result as anyResult;
 use axum::{
     Router,
     http::{Method, header::CONTENT_TYPE},
@@ -41,7 +42,7 @@ mod utilities;
 mod web;
 
 #[tokio::main]
-async fn main() -> Result<(), AppError> {
+async fn main() -> anyResult<()> {
     fmt()
         .with_env_filter(
             EnvFilter::from_default_env(), // backend (target) = info (logging level)
@@ -171,5 +172,5 @@ async fn main() -> Result<(), AppError> {
     swap_cdc_reader.stop();
 
     housing_cdc_future.await?;
-    Ok(swap_cdc_future.await?)
+    swap_cdc_future.await
 }

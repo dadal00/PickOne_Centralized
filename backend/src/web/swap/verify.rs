@@ -1,10 +1,10 @@
 use super::models::ItemPayload;
-use crate::{AppError, web::verify::validate_length};
+use crate::{error::HttpErrorResponse, web::verify::validate_length};
 use rustrict::CensorStr;
 
-pub fn check_item(payload: &ItemPayload) -> Result<(), AppError> {
+pub fn check_item(payload: &ItemPayload) -> Result<(), HttpErrorResponse> {
     validate_item(&payload.title, &payload.description)
-        .map_err(|e| AppError::BadRequest(e.to_string()))?;
+        .map_err(|e| HttpErrorResponse::BadRequest(e.to_string()))?;
 
     Ok(())
 }

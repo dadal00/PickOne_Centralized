@@ -27,7 +27,7 @@ async fn send_code_email(
         .from(format!("BoilerSwap <{}>", state.config.email.from_email).parse()?)
         .to(user_email.parse()?)
         .subject("BoilerSwap Code")
-        .body(format!("Your code is {}", code))?;
+        .body(format!("Your code is {code}"))?;
 
     let credentials = Credentials::new(
         state.config.email.from_email.to_string(),

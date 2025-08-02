@@ -8,7 +8,10 @@ use super::{
     verify::{hash_password, verify_password},
 };
 use crate::{
-    AppError, AppState,
+    AppError,
+    AppError::HttpResponseBack,
+    AppState,
+    error::{HttpErrorResponse, HttpErrorResponse::Unauthorized},
     microservices::redis::{insert_id, remove_id},
 };
 use axum::http::header::HeaderMap;
@@ -168,7 +171,9 @@ pub async fn try_create_redis_account(
         website_path,
     )
     .await?
-    .ok_or(AppError::Unauthorized("Unable to verify".to_string()))?;
+    .ok_or(HttpErrorResponse::Unauthorized(
+        "Unable to verify".to_string(),
+    ))?;
 
     remove_id(
         state.clone(),
@@ -354,7 +359,9 @@ pub async fn try_get_redis_account(
 
             Ok(account)
         }
-        None => Err(AppError::Unauthorized("Unable to verify".to_string())),
+        None => Err(HttpResponseBack(Unauthorized(
+            "Unable to verify".to_string(),
+        ))),
     }
 }
 
@@ -394,18 +401,14 @@ pub async fn delete_all_sessions(
     for session_id in state
         .redis_connection_manager
         .clone()
-        .lrange(
-            format!("{}:{}:{}", website_path, key_secondary, email),
-            0,
-            -1,
-        )
+        .lrange(format!("{website_path}:{key_secondary}:{email}"), 0, -1)
         .await?
     {
-        pipe.del(format!("{}:{}:{}", website_path, key, session_id))
+        pipe.del(format!("{website_path}:{key}:{session_id}"))
             .ignore();
     }
 
-    pipe.del(format!("{}:{}:{}", website_path, key_secondary, email))
+    pipe.del(format!("{website_path}:{key_secondary}:{email}"))
         .ignore();
 
     pipe.query_async::<()>(&mut state.redis_connection_manager.clone())
@@ -423,13 +426,13 @@ async fn insert_session(
     email: &str,
 ) -> Result<(), AppError> {
     let _: () = INSERT_SESSION_SCRIPT
-        .key(format!("{}:{}:{}", website_path, key, session_id))
-        .key(format!("{}:{}:{}", website_path, key_secondary, email))
+        .key(format!("{website_path}:{key}:{session_id}"))
+        .key(format!("{website_path}:{key_secondary}:{email}"))
         .arg(session_id)
         .arg(email)
         .arg(state.config.session.session_duration_seconds)
         .arg(state.config.session.max_sessions)
-        .arg(format!("{}:{}:", website_path, key))
+        .arg(format!("{website_path}:{key}:"))
         .invoke_async(&mut state.redis_connection_manager.clone())
         .await?;
 

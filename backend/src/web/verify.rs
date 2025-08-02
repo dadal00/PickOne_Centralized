@@ -5,8 +5,11 @@ use super::{
     utilities::{format_verified_result, label_request},
 };
 use crate::{
-    AppError, AppState, RedisAction, WebsitePath, WebsiteRoute,
+    AppError,
+    AppError::HttpResponseBack,
+    AppState, RedisAction, WebsitePath, WebsiteRoute,
     config::{read_secret, try_load},
+    error::{HttpErrorResponse, HttpErrorResponse::Unauthorized},
 };
 use argon2::{
     Algorithm::Argon2id, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier,
@@ -79,7 +82,7 @@ pub fn verify_api_token(headers: &HeaderMap, website_path: &WebsitePath) -> bool
 
 pub fn verify_password(password: &str, password_hash: &str) -> bool {
     let parsed_hash = PasswordHash::new(password_hash)
-        .unwrap_or_else(|e| panic!("Failed to parse password hash: {}", e));
+        .unwrap_or_else(|e| panic!("Failed to parse password hash: {e}"));
 
     Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
@@ -126,23 +129,21 @@ pub fn hash_password(password: &str) -> String {
     let salt = SaltString::generate(&mut OsRng);
 
     let params = Params::new(65536, 3, 1, None)
-        .unwrap_or_else(|e| panic!("Failed to create Argon2 params: {}", e));
+        .unwrap_or_else(|e| panic!("Failed to create Argon2 params: {e}"));
 
     let argon2 = Argon2::new(Argon2id, V0x13, params);
 
-    let password_hash = argon2
+    argon2
         .hash_password(password.as_bytes(), &salt)
-        .unwrap_or_else(|e| panic!("Failed to hash password: {}", e))
-        .to_string();
-
-    password_hash
+        .unwrap_or_else(|e| panic!("Failed to hash password: {e}"))
+        .to_string()
 }
 
 fn read_decoding_key(secret_name: &str) -> DecodingKey {
     DecodingKey::from_secret(
         read_secret(secret_name)
             .unwrap_or_else(|e| {
-                panic!("Failed to load {}: {}", secret_name, e);
+                panic!("Failed to load {secret_name}: {e}");
             })
             .as_bytes(),
     )
@@ -158,18 +159,25 @@ pub async fn check_token(
         Some(verified_result) if allowed.contains(&verified_result.redis_action) => {
             Ok(verified_result)
         }
-        _ => Err(AppError::Unauthorized("Unable to verify".to_string())),
+        _ => Err(HttpResponseBack(Unauthorized(
+            "Unable to verify".to_string(),
+        ))),
     }
 }
 
-pub fn check_token_content(redis_action: &RedisAction, token: &str) -> Result<(), AppError> {
+pub fn check_token_content(
+    redis_action: &RedisAction,
+    token: &str,
+) -> Result<(), HttpErrorResponse> {
     match redis_action {
         RedisAction::Update => validate_password(token)
-            .map_err(|_| AppError::Unauthorized("Unable to verify".to_string())),
+            .map_err(|_| HttpErrorResponse::Unauthorized("Unable to verify".to_string())),
         RedisAction::Auth | RedisAction::Forgot
             if token.len() != *CODE_LENGTH || !CODE_REGEX.is_match(token) =>
         {
-            Err(AppError::Unauthorized("Unable to verify".to_string()))
+            Err(HttpErrorResponse::Unauthorized(
+                "Unable to verify".to_string(),
+            ))
         }
         _ => Ok(()),
     }
@@ -179,46 +187,52 @@ pub async fn is_request_authorized(
     state: Arc<AppState>,
     headers: &HeaderMap,
     request: &mut Request,
-) -> Result<(), AppError> {
+) -> Result<(), HttpErrorResponse> {
     let origin = headers
         .get(ORIGIN)
         .and_then(|value| value.to_str().ok())
-        .ok_or_else(|| AppError::Unauthorized("Unable to verify".to_string()))?;
+        .ok_or_else(|| HttpErrorResponse::Unauthorized("Unable to verify".to_string()))?;
 
     if origin != state.config.server.svelte_url {
-        return Err(AppError::Unauthorized("Unable to verify".to_string()));
+        return Err(HttpErrorResponse::Unauthorized(
+            "Unable to verify".to_string(),
+        ));
     }
 
     let website_path = check_path(request)
-        .await?
-        .ok_or_else(|| AppError::Unauthorized("Unable to verify".to_string()))?;
+        .await
+        .ok_or_else(|| HttpErrorResponse::Unauthorized("Unable to verify".to_string()))?;
 
     if !verify_api_token(headers, &website_path) {
-        return Err(AppError::Unauthorized("Unable to verify".to_string()));
+        return Err(HttpErrorResponse::Unauthorized(
+            "Unable to verify".to_string(),
+        ));
     }
 
     Ok(())
 }
 
-pub fn check_email(token: &str) -> Result<(), AppError> {
-    validate_email(token).map_err(|e| AppError::BadRequest(e.to_string()))
+pub fn check_email(token: &str) -> Result<(), HttpErrorResponse> {
+    validate_email(token).map_err(|e| HttpErrorResponse::BadRequest(e.to_string()))
 }
 
-pub fn check_account(payload: &Account) -> Result<(), AppError> {
+pub fn check_account(payload: &Account) -> Result<(), HttpErrorResponse> {
     validate_account(&payload.email, &payload.password)
-        .map_err(|e| AppError::BadRequest(e.to_string()))
+        .map_err(|e| HttpErrorResponse::BadRequest(e.to_string()))
 }
 
-pub fn check_resend(payload: &VerifiedTokenResult) -> Result<(), AppError> {
+pub fn check_resend(payload: &VerifiedTokenResult) -> Result<(), HttpErrorResponse> {
     payload
         .serialized_account
         .as_ref()
-        .ok_or(AppError::Unauthorized("Unable to verify".to_string()))?;
+        .ok_or(HttpErrorResponse::Unauthorized(
+            "Unable to verify".to_string(),
+        ))?;
 
     Ok(())
 }
 
-async fn check_path(request: &mut Request) -> Result<Option<WebsitePath>, AppError> {
+async fn check_path(request: &mut Request) -> Option<WebsitePath> {
     match request.uri().path() {
         path if path.starts_with(&format!(
             "/{}/{}",
@@ -228,7 +242,7 @@ async fn check_path(request: &mut Request) -> Result<Option<WebsitePath>, AppErr
         {
             label_request(request, WebsitePath::BoilerSwap);
 
-            Ok(Some(WebsitePath::BoilerSwap))
+            Some(WebsitePath::BoilerSwap)
         }
         path if path.starts_with(&format!(
             "/{}/{}",
@@ -236,7 +250,7 @@ async fn check_path(request: &mut Request) -> Result<Option<WebsitePath>, AppErr
             WebsiteRoute::Api.as_ref()
         )) =>
         {
-            Ok(Some(WebsitePath::Housing))
+            Some(WebsitePath::Housing)
         }
         path if path.starts_with(&format!(
             "/{}/{}",
@@ -244,8 +258,8 @@ async fn check_path(request: &mut Request) -> Result<Option<WebsitePath>, AppErr
             WebsiteRoute::Api.as_ref()
         )) =>
         {
-            Ok(Some(WebsitePath::Home))
+            Some(WebsitePath::Home)
         }
-        _ => Ok(None),
+        _ => None,
     }
 }

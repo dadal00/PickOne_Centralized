@@ -1,13 +1,13 @@
 use super::models::{RatingsBrokenDown, ReviewPayload};
-use crate::{AppError, config::try_load};
+use crate::{config::try_load, error::HttpErrorResponse};
 use once_cell::sync::Lazy;
 use rustrict::CensorStr;
 
 static MAX_CHARS: Lazy<usize> = Lazy::new(|| try_load("PUBLIC_HOUSING_MAX_CHARS", "350").unwrap());
 static MIN_CHARS: Lazy<usize> = Lazy::new(|| try_load("PUBLIC_HOUSING_MIN_CHARS", "50").unwrap());
 
-pub fn check_review(payload: &ReviewPayload) -> Result<(), AppError> {
-    validate_review(payload).map_err(|e| AppError::BadRequest(e.to_string()))?;
+pub fn check_review(payload: &ReviewPayload) -> Result<(), HttpErrorResponse> {
+    validate_review(payload).map_err(|e| HttpErrorResponse::BadRequest(e.to_string()))?;
 
     Ok(())
 }

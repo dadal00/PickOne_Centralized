@@ -16,7 +16,7 @@ use teloxide::{
 
 pub async fn start_bot(state: Arc<AppState>) -> Result<(), AppError> {
     let bot = Bot::new(read_secret("RUST_BOT_CUTS_KEY").unwrap_or_else(|e| {
-        panic!("Failed to load RUST_BOT_CUTS_KEY: {}", e);
+        panic!("Failed to load RUST_BOT_CUTS_KEY: {e}");
     }));
 
     tokio::spawn(async move {

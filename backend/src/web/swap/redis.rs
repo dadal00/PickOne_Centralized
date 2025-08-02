@@ -3,7 +3,10 @@ use super::{
     models::ItemPayload,
 };
 use crate::{
-    AppError, AppState, RedisAction, WebsitePath,
+    AppError,
+    AppError::HttpResponseBack,
+    AppState, RedisAction, WebsitePath,
+    error::HttpErrorResponse::Unauthorized,
     web::locks::{increment_lock_key, is_redis_locked},
 };
 use once_cell::sync::Lazy;
@@ -54,7 +57,7 @@ pub async fn decrement_items(
     email: &str,
 ) -> Result<(), AppError> {
     let _count: () = DECR_ITEMS_SCRIPT
-        .key(format!("{}:{}:{}", website_path, key, email))
+        .key(format!("{website_path}:{key}:{email}"))
         .invoke_async(&mut redis_connection_manager.clone())
         .await?;
 
@@ -75,7 +78,9 @@ pub async fn try_post_item(
     )
     .await?
     {
-        return Err(AppError::Unauthorized("Posted too many items".to_string()));
+        return Err(HttpResponseBack(Unauthorized(
+            "Posted too many items".to_string(),
+        )));
     }
 
     handle_item_insertion(

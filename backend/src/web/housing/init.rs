@@ -6,7 +6,8 @@ use super::{
     },
     models::{HousingID, HousingPayload, ReviewRow, WeightedHousingRatings},
 };
-use crate::{AppError, config::try_load, microservices::database::DatabaseQueries};
+use crate::{config::try_load, microservices::database::DatabaseQueries};
+use anyhow::Result as anyResult;
 use meilisearch_sdk::client::Client;
 use scylla::{client::session::Session, response::PagingState};
 use std::{collections::HashMap, ops::ControlFlow, sync::Arc};
@@ -16,7 +17,7 @@ pub async fn init_housing(
     database_session: Arc<Session>,
     database_queries: &DatabaseQueries,
     meili_client: Arc<Client>,
-) -> Result<JoinHandle<Result<(), AppError>>, AppError> {
+) -> anyResult<JoinHandle<anyResult<()>>> {
     let housing_file_path = format!(
         "{}{}",
         try_load::<String>("RUST_CONTAINER_FOLDER_PATH", "/assets").unwrap(),
@@ -48,7 +49,7 @@ async fn reindex(
     database_queries: DatabaseQueries,
     meili_client: Arc<Client>,
     housing: &mut [HousingPayload],
-) -> Result<(), AppError> {
+) -> anyResult<()> {
     let mut paging_state = PagingState::start();
 
     clear_all_housing_indexes(meili_client.clone(), housing).await?;
