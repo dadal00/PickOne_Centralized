@@ -25,6 +25,9 @@ jobs:
 
       - name: Lint Frontend
         run: |
+          set -a
+          source .env
+          set +a
           cd frontend
           npm ci
           npm run lint
