@@ -2,8 +2,8 @@ use crate::{
     config::try_load,
     error::ScyllaError,
     web::{
-        housing::database::{Housing, create_housing_tables},
-        swap::database::{BoilerSwap, create_swap_tables},
+        housing::schema::{Housing, create_housing_tables},
+        swap::schema::{BoilerSwap, create_swap_tables},
     },
 };
 use scylla::client::{session::Session, session_builder::SessionBuilder};
