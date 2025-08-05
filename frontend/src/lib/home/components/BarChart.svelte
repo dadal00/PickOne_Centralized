@@ -1,10 +1,9 @@
 <script lang="ts">
 	import * as d3 from 'd3'
 	import { onDestroy, onMount } from 'svelte'
-	import { calculateDimensions, chart_init, update_chart } from '../helpers/chartHelpers'
+	import { calculateDimensions, chart_init, update_chart } from '../helpers/chart'
 	import { type chartConfig, type ChartData } from '../models'
-	import { chartState } from '../ChartState.svelte'
-	import { fetch_visitors } from '../helpers/utils'
+	import { chartState } from '../chart-state.svelte'
 
 	const data: ChartData[] = $derived(chartState.getData())
 
@@ -16,8 +15,6 @@
 	let resizeHandler: () => void
 
 	onMount(async () => {
-		await fetch_visitors()
-
 		svg = update_chart(
 			dynamicChartConfig,
 			calculateDimensions(

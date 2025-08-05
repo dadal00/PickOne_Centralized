@@ -1,24 +1,24 @@
 use crate::{
-    api::{
-        bot::{chat::start_bot, photo::photo_handler},
-        microservices::{
-            cdc::{RedisCDCParams, ScyllaCDCParams, start_cdc},
-            database::schema::{BOILER_SWAP_KEYSPACE, columns::boiler_swap::items, tables},
-        },
-        web::{
-            handlers::{
-                api_token_check, authenticate_handler, delete_handler, forgot_handler,
-                resend_handler, verify_handler, visitors_handler,
-            },
-            models::{METRICS_ROUTE, RedisAction, WebsitePath, WebsiteRoute},
-            swap::handlers::post_item_handler,
-        },
-    },
+    bot::{chat::start_bot, photo::photo_handler},
     error::AppError,
-    metrics::{RedisMetricAction, metrics_handler},
+    metrics::metrics_handler,
+    microservices::cdc::core::{ScyllaCDCParams, start_cdc},
     signals::shutdown_signal,
     state::AppState,
+    web::{
+        handlers::{
+            api_token_check, authenticate_handler, delete_handler, forgot_handler, resend_handler,
+            verify_handler,
+        },
+        housing::{
+            cdc::start_housing_cdc,
+            handlers::{post_review_handler, update_thumbs_handler},
+        },
+        models::{METRICS_ROUTE, RedisAction, WebsitePath, WebsiteRoute},
+        swap::{cdc::start_swap_cdc, handlers::post_item_handler},
+    },
 };
+use anyhow::Result as anyResult;
 use axum::{
     Router,
     http::{Method, header::CONTENT_TYPE},
@@ -31,15 +31,18 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
 
-mod api;
+mod bot;
 mod config;
 mod error;
 mod metrics;
+mod microservices;
 mod signals;
 mod state;
+mod utilities;
+mod web;
 
 #[tokio::main]
-async fn main() -> Result<(), AppError> {
+async fn main() -> anyResult<()> {
     fmt()
         .with_env_filter(
             EnvFilter::from_default_env(), // backend (target) = info (logging level)
@@ -48,7 +51,7 @@ async fn main() -> Result<(), AppError> {
 
     info!("Starting server...");
 
-    let (state, meili_reindex_future) = AppState::new().await?;
+    let (state, meili_swap_future, meili_housing_future) = AppState::new().await?;
 
     start_bot(state.clone()).await?;
 
@@ -66,14 +69,6 @@ async fn main() -> Result<(), AppError> {
         .max_age(Duration::from_secs(60 * 60));
 
     let app = Router::new()
-        .route(
-            &format!(
-                "/{}/{}/visitors",
-                WebsitePath::Home.as_ref(),
-                WebsiteRoute::Api.as_ref()
-            ),
-            post(visitors_handler),
-        )
         .route(
             &format!(
                 "/{}/{}/{}",
@@ -128,6 +123,22 @@ async fn main() -> Result<(), AppError> {
             post(resend_handler),
         )
         .route(
+            &format!(
+                "/{}/{}/post-review",
+                WebsitePath::Housing.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+            ),
+            post(post_review_handler),
+        )
+        .route(
+            &format!(
+                "/{}/{}/update-thumbs",
+                WebsitePath::Housing.as_ref(),
+                WebsiteRoute::Api.as_ref(),
+            ),
+            post(update_thumbs_handler),
+        )
+        .route(
             &format!("/{}/:id", WebsitePath::Photos.as_ref()),
             get(photo_handler),
         )
@@ -145,23 +156,11 @@ async fn main() -> Result<(), AppError> {
 
     let listener = TcpListener::bind(&addr).await?;
 
-    meili_reindex_future.await??;
+    meili_swap_future.await??;
+    meili_housing_future.await??;
 
-    let (mut cdc_reader, cdc_future) = start_cdc(
-        state.clone(),
-        ScyllaCDCParams {
-            keyspace: BOILER_SWAP_KEYSPACE.to_string(),
-            table: tables::boiler_swap::ITEMS.to_string(),
-            id_name: items::ITEM_ID.to_string(),
-        },
-        WebsitePath::BoilerSwap,
-        RedisCDCParams {
-            metric: RedisMetricAction::Items.as_ref().to_string(),
-            deletion_name: RedisAction::DeletedItem.as_ref().to_string(),
-            metric_prefix: RedisAction::Metric.as_ref().to_string(),
-        },
-    )
-    .await?;
+    let (mut swap_cdc_reader, swap_cdc_future) = start_swap_cdc(state.clone()).await?;
+    let (mut housing_cdc_reader, housing_cdc_future) = start_housing_cdc(state).await?;
 
     info!("Server running on {}", addr);
 
@@ -169,7 +168,9 @@ async fn main() -> Result<(), AppError> {
         .with_graceful_shutdown(shutdown_signal())
         .await?;
 
-    cdc_reader.stop();
+    housing_cdc_reader.stop();
+    swap_cdc_reader.stop();
 
-    Ok(cdc_future.await?)
+    housing_cdc_future.await?;
+    swap_cdc_future.await
 }

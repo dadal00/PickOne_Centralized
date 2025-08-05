@@ -3,7 +3,7 @@
 	import { type Condition, type ItemType, type Location } from '$lib/swap/models'
 	import { goto } from '$app/navigation'
 	import { PUBLIC_MAX_CHARS, PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
-	import { appState } from '$lib/swap/AppState.svelte'
+	import { appState } from '$lib/swap/app-state.svelte'
 
 	let query: string = $state('')
 	let itemTypeFilter: ItemType | '' = $state('')

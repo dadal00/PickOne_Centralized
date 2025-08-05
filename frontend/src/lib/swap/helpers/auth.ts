@@ -1,7 +1,7 @@
 import { goto } from '$app/navigation'
 import { PUBLIC_SWAP_BACKEND_PATH, PUBLIC_SVELTE_SWAP_ROOT } from '$env/static/public'
 import { Status, type Account } from '$lib/swap/models'
-import { appState } from '$lib/swap/AppState.svelte'
+import { appState } from '$lib/swap/app-state.svelte'
 import {
 	fetchBackend,
 	isLimited,

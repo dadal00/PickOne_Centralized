@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { PUBLIC_PAGE_SIZE } from '$env/static/public'
-	import { appState } from '$lib/swap/AppState.svelte'
+	import { appState } from '$lib/swap/app-state.svelte'
 </script>
 
 <div class="flex justify-center gap-4 mt-8">

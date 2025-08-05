@@ -8,12 +8,3 @@ providers:
     editable: true
     options:
       path: /var/lib/grafana/dashboards
-
-  - name: "ScyllaDB"
-    orgId: 1
-    folder: "ScyllaDB"
-    type: file
-    disableDeletion: false
-    editable: true
-    options:
-      path: /var/lib/grafana/dashboards/scylla

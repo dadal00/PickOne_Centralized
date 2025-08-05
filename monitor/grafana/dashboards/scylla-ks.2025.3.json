@@ -1,0 +1,882 @@
+{
+  "annotations": {
+    "class": "default_annotations",
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": false,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      },
+      {
+        "class": "annotation_restart",
+        "datasource": "prometheus",
+        "enable": true,
+        "expr": "resets(scylla_gossip_heart_beat{cluster=\"$cluster\"}[$__rate_interval])>0",
+        "hide": false,
+        "iconColor": "rgba(255, 96, 96, 1)",
+        "limit": 100,
+        "name": "node_restart",
+        "showIn": 0,
+        "tagKeys": "instance,dc,cluster",
+        "tags": [],
+        "titleFormat": "restart",
+        "type": "tags"
+      },
+      {
+        "class": "annotation_stall",
+        "datasource": "prometheus",
+        "enable": false,
+        "expr": "changes(scylla_stall_detector_reported{cluster=\"$cluster\"}[$__rate_interval])>0",
+        "hide": false,
+        "iconColor": "rgba(255, 96, 96, 1)",
+        "limit": 100,
+        "name": "stall detector",
+        "showIn": 0,
+        "tagKeys": "dc,instance,shard",
+        "tags": [],
+        "titleFormat": "Stall found",
+        "type": "tags"
+      },
+      {
+        "class": "annotation_schema_changed",
+        "datasource": "prometheus",
+        "enable": false,
+        "expr": "changes(scylla_database_schema_changed{cluster=\"$cluster\"}[$__rate_interval])>0",
+        "hide": false,
+        "iconColor": "rgba(255, 96, 96, 1)",
+        "limit": 100,
+        "name": "Schema Changed",
+        "showIn": 0,
+        "tagKeys": "instance,dc,cluster",
+        "tags": [],
+        "titleFormat": "schema changed",
+        "type": "tags"
+      },
+      {
+        "class": "annotation_manager_task",
+        "datasource": "prometheus",
+        "enable": true,
+        "expr": "scylla_manager_task_active_count{type=~\"repair|backup\",cluster=\"$cluster\"}>0",
+        "hide": false,
+        "iconColor": "#73BF69",
+        "limit": 100,
+        "name": "Task",
+        "showIn": 0,
+        "tagKeys": "type",
+        "tags": [],
+        "titleFormat": "Running",
+        "type": "tags"
+      },
+      {
+        "class": "annotation_hints_writes",
+        "datasource": "prometheus",
+        "enable": false,
+        "expr": "changes(scylla_hints_manager_written{cluster=\"$cluster\"}[$__rate_interval])>0",
+        "hide": false,
+        "iconColor": "rgb(255, 176, 0, 128)",
+        "limit": 100,
+        "name": "Hints Write",
+        "showIn": 0,
+        "tagKeys": "instance,dc,cluster",
+        "tags": [],
+        "titleFormat": "Hints write",
+        "type": "tags"
+      },
+      {
+        "class": "annotation_hints_sent",
+        "datasource": "prometheus",
+        "enable": false,
+        "expr": "changes(scylla_hints_manager_sent{cluster=\"$cluster\"}[$__rate_interval])>0",
+        "hide": false,
+        "iconColor": "rgb(50, 176, 0, 128)",
+        "limit": 100,
+        "name": "Hints Sent",
+        "showIn": 0,
+        "tagKeys": "instance,dc,cluster",
+        "tags": [],
+        "titleFormat": "Hints Sent",
+        "type": "tags"
+      },
+      {
+        "class": "mv_building",
+        "datasource": "prometheus",
+        "enable": true,
+        "expr": "sum(scylla_view_builder_builds_in_progress{cluster=\"$cluster\"})>0",
+        "hide": false,
+        "iconColor": "rgb(50, 176, 0, 128)",
+        "limit": 100,
+        "name": "MV",
+        "showIn": 0,
+        "tagKeys": "instance,dc,cluster",
+        "tags": [],
+        "titleFormat": "Materialized View built",
+        "type": "tags"
+      },
+      {
+        "class": "ops_annotation",
+        "datasource": "prometheus",
+        "enable": true,
+        "expr": "10*min(scylla_node_ops_finished_percentage{cluster=\"$cluster\"}) by (ops, dc,instance) < 10",
+        "hide": false,
+        "iconColor": "rgb(50, 176, 0, 128)",
+        "limit": 100,
+        "name": "ops",
+        "showIn": 0,
+        "tagKeys": "ops,dc,instance",
+        "tags": [],
+        "titleFormat": "Operation",
+        "type": "tags"
+      },
+      {
+        "class": "stream_annotation",
+        "dashversion": [">5.2", ">2023.1"],
+        "datasource": "prometheus",
+        "enable": true,
+        "expr": "10*min(scylla_streaming_finished_percentage{cluster=\"$cluster\"}) by (ops, dc,instance) < 10",
+        "hide": false,
+        "iconColor": "rgb(50, 176, 0, 128)",
+        "limit": 100,
+        "name": "streaming",
+        "showIn": 0,
+        "tagKeys": "ops,dc,instance",
+        "tags": [],
+        "titleFormat": "Streaming",
+        "type": "tags"
+      }
+    ]
+  },
+  "class": "dashboard",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "hideControls": true,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": true,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "type": "dashboards"
+    }
+  ],
+  "overwrite": true,
+  "panels": [
+    {
+      "class": "keyspace_table",
+      "columns": [
+        {
+          "text": "Avg",
+          "value": "avg"
+        }
+      ],
+      "datasource": "prometheus",
+      "fieldConfig": {
+        "decimals": 0,
+        "defaults": {
+          "custom": {
+            "align": null,
+            "filterable": true
+          }
+        },
+        "mappings": [],
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Disk space"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "decbytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "W P95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "\u00b5s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "W P99"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "\u00b5s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "R P95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "\u00b5s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "R P99"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "\u00b5s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "writes/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "sishort"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "reads/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "sishort"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "keyspace"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "",
+                    "url": "/d/${__dashboard.uid}/${__dashboard.slug}?from=${__from}&to=${__to}&var-cluster=${cluster}&var-dc=${dc}&var-node=${node}&var-shard=${shard}&var-func=${func}&var-ks=${__value.text}"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "unit": "short"
+      },
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 3
+      },
+      "id": 2,
+      "links": [],
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(scylla_column_family_live_sstable{}) by(ks)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(rate(scylla_column_family_write_latency_count{ks=\"$ks\"}[1m])) by( ks)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "avg(wlatencyp95ks{by=\"cluster\", cluster=\"$cluster\"}) by (ks)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "C"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "avg(wlatencyp99ks{by=\"cluster\", cluster=\"$cluster\"}) by (ks)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "D"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(rate(scylla_column_family_read_latency_count{cluster=\"$cluster\"}[1m])) by( ks)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "E"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "avg(rlatencyp95ks{by=\"cluster\", cluster=\"$cluster\"}) by (ks)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "F"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "avg(rlatencyp99ks{by=\"cluster\", cluster=\"$cluster\"}) by (ks)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "G"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(scylla_column_family_total_disk_space{cluster=\"$cluster\"}) by (ks)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "H"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max_over_time(sum(rate(scylla_column_family_write_latency_count{cluster=\"$cluster\"}[1m])) by(ks)[24h:])",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "I"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max_over_time(sum(rate(scylla_column_family_read_latency_count{cluster=\"$cluster\"}[1m])) by(ks)[24h:])",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "J"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "count(count(scylla_column_family_cache_hit_rate{cluster=\"$cluster\"}) by(cf, ks)) by (ks)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "K"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "count((sum by (ks, cf) (rate(scylla_column_family_read_latency_count{cluster=\"$cluster\"}[1h])or scylla_column_family_cache_hit_rate{cluster=\"$cluster\"}*0) + sum by (ks, cf) (rate(scylla_column_family_write_latency_count{cluster=\"$cluster\"}[1h])or scylla_column_family_cache_hit_rate{cluster=\"$cluster\"}*0))>0) by (ks)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "L"
+        }
+      ],
+      "title": "Keyspaces",
+      "transform": "table",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "ks",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Value #A",
+                "Value #B",
+                "Value #C",
+                "Value #D",
+                "Value #E",
+                "Value #F",
+                "Value #G",
+                "Value #H",
+                "Value #I",
+                "Value #J",
+                "Value #K",
+                "Value #L",
+                "ks"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "Value #A": 4,
+              "Value #B": 5,
+              "Value #C": 7,
+              "Value #D": 8,
+              "Value #E": 9,
+              "Value #F": 11,
+              "Value #G": 12,
+              "Value #H": 3,
+              "Value #I": 6,
+              "Value #J": 10,
+              "Value #K": 1,
+              "Value #L": 2,
+              "ks": 0
+            },
+            "renameByName": {
+              "Value #A": "sstables",
+              "Value #B": "writes/s",
+              "Value #C": "W P95",
+              "Value #D": "W P99",
+              "Value #E": "reads/s",
+              "Value #F": "R P95",
+              "Value #G": "R P99",
+              "Value #H": "Disk space",
+              "Value #I": "24h Max W",
+              "Value #J": "24h Max R",
+              "Value #K": "# Tables",
+              "Value #L": "# Active Tables",
+              "ks": "keyspace"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "class": "keyspace_tables_table",
+      "columns": [
+        {
+          "text": "Avg",
+          "value": "avg"
+        }
+      ],
+      "datasource": "prometheus",
+      "fieldConfig": {
+        "decimals": 0,
+        "defaults": {
+          "custom": {
+            "align": null,
+            "filterable": true
+          }
+        },
+        "mappings": [],
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Disk space"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "decbytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "W P95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "\u00b5s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "W P99"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "\u00b5s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "R P95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "\u00b5s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "R P99"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "\u00b5s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "writes/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "sishort"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "reads/s"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "sishort"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "table"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "",
+                    "url": "/d/${__dashboard.uid}/${__dashboard.slug}?from=${__from}&to=${__to}&var-cluster=${cluster}&var-dc=${dc}&var-node=${node}&var-shard=${shard}&var-func=${func}&var-table=${__value.text}&var-ks=${ks}"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "unit": "short"
+      },
+      "fontSize": "100%",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "id": 3,
+      "links": [],
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pageSize": null,
+      "scroll": true,
+      "showHeader": true,
+      "sort": {
+        "col": 0,
+        "desc": true
+      },
+      "targets": [
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(scylla_column_family_live_sstable{ks=\"$ks\", cf=~\"$table\"}) by(ks,cf)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(rate(scylla_column_family_write_latency_count{ks=\"$ks\", cf=~\"$table\"}[1m])) by( ks,cf)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "wlatencyp95ks{ks=\"$ks\", cf=~\"$table\", by=\"cluster\", cluster=\"$cluster\"}",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "C"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "wlatencyp99ks{ks=\"$ks\", cf=~\"$table\", by=\"cluster\", cluster=\"$cluster\"}",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "D"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(rate(scylla_column_family_read_latency_count{ks=\"$ks\", cf=~\"$table\"}[1m])) by( ks,cf)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "E"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rlatencyp95ks{ks=\"$ks\", cf=~\"$table\", by=\"cluster\", cluster=\"$cluster\"}",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "F"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "rlatencyp99ks{ks=\"$ks\", cf=~\"$table\", by=\"cluster\", cluster=\"$cluster\"}",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "G"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "sum(scylla_column_family_total_disk_space{ks=\"$ks\", cf=~\"$table\", cluster=\"$cluster\"}) by (cf)",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "H"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max_over_time(sum(rate(scylla_column_family_write_latency_count{ks=\"$ks\", cf=~\"$table\"}[1m])) by(cf)[24h:])",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "I"
+        },
+        {
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "max_over_time(sum(rate(scylla_column_family_read_latency_count{ks=\"$ks\", cf=~\"$table\"}[1m])) by(cf)[24h:])",
+          "format": "table",
+          "hide": false,
+          "instant": true,
+          "legendFormat": "__auto",
+          "range": false,
+          "refId": "J"
+        }
+      ],
+      "title": "Tables",
+      "transform": "table",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "cf",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "Value #A",
+                "Value #B",
+                "Value #C",
+                "Value #D",
+                "Value #E",
+                "Value #F",
+                "Value #G",
+                "Value #H",
+                "Value #I",
+                "Value #J",
+                "cf"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "includeByName": {},
+            "indexByName": {
+              "Value #A": 2,
+              "Value #B": 3,
+              "Value #C": 5,
+              "Value #D": 6,
+              "Value #E": 7,
+              "Value #F": 9,
+              "Value #G": 10,
+              "Value #H": 1,
+              "Value #I": 4,
+              "Value #J": 8,
+              "cf": 0
+            },
+            "renameByName": {
+              "Value #A": "sstables",
+              "Value #B": "writes/s",
+              "Value #C": "W P95",
+              "Value #D": "W P99",
+              "Value #E": "reads/s",
+              "Value #F": "R P95",
+              "Value #G": "R P99",
+              "Value #H": "Disk space",
+              "Value #I": "24h Max W",
+              "Value #J": "24h Max R",
+              "cf": "table",
+              "ks 1": "keyspace"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    }
+  ],
+
+  "time": {
+    "from": "now-30m",
+    "to": "now"
+  },
+  "timepicker": {
+    "now": true,
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+  },
+  "timezone": "utc",
+  "title": "Keyspace",
+  "uid": "ks-2025-3",
+  "version": 5
+}

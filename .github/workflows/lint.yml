@@ -3,7 +3,7 @@ name: Lint
 on:
   push:
     branches:
-      - '**'
+      - "**"
 
 jobs:
   build:
@@ -21,9 +21,15 @@ jobs:
         run: |
           cd backend
           cargo fmt --all -- --check
+          cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Lint Frontend
         run: |
+          set -a
+          source .env
+          set +a
           cd frontend
           npm ci
           npm run lint
+          npx svelte-check --fail-on-warnings
+          npx tsc --noEmit

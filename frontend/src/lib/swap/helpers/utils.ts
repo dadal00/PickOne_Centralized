@@ -4,7 +4,7 @@ import {
 	PUBLIC_MIN_PASSWORD_LENGTH,
 	PUBLIC_SWAP_BACKEND_PATH
 } from '$env/static/public'
-import { appState } from '$lib/swap/AppState.svelte'
+import { appState } from '$lib/swap/app-state.svelte'
 import { Status, type Account, type ExpirationColor, type TokenPayload } from '../models'
 import DOMPurify from 'dompurify'
 

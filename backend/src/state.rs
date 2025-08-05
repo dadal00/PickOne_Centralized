@@ -1,23 +1,18 @@
 use crate::{
     AppError,
-    api::{
-        microservices::{
-            database::init::{DatabaseQueries, init_database},
-            meilisearch::init_meilisearch,
-            redis::init_redis,
-        },
-        web::{
-            models::{RedisAction, WebsitePath},
-            swap::cdc::{expire_ttl, spawn_ttl_task},
-        },
-    },
     config::Config,
-    metrics::{RedisMetricAction, set_redis_metric},
+    microservices::{
+        database::{DatabaseQueries, init_database},
+        meilisearch::init_meilisearch,
+        redis::init_redis,
+    },
+    web::swap::cdc::{expire_ttl, spawn_ttl_task},
 };
+use anyhow::Result as anyResult;
 use meilisearch_sdk::client::Client;
 use redis::aio::ConnectionManager;
 use scylla::client::session::Session;
-use std::sync::{Arc, atomic::Ordering::Relaxed};
+use std::sync::Arc;
 use tokio::task::JoinHandle;
 
 pub struct AppState {
@@ -29,7 +24,14 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub async fn new() -> Result<(Arc<Self>, JoinHandle<Result<(), AppError>>), AppError> {
+    pub async fn new() -> Result<
+        (
+            Arc<Self>,
+            JoinHandle<anyResult<()>>,
+            JoinHandle<anyResult<()>>,
+        ),
+        AppError,
+    > {
         let redis_future = init_redis();
 
         let (database_session, database_queries) = init_database().await?;
@@ -42,19 +44,7 @@ impl AppState {
 
         let redis_connection_manager = redis_future.await?;
         expire_ttl_future.await?;
-        let (meili_client, meili_reindex_future, item_counter) = meili_future.await?;
-
-        set_redis_metric(
-            redis_connection_manager.clone(),
-            &format!(
-                "{}:{}:{}",
-                WebsitePath::BoilerSwap.as_ref(),
-                RedisAction::Metric.as_ref(),
-                RedisMetricAction::Items.as_ref()
-            ),
-            &item_counter.load(Relaxed),
-        )
-        .await?;
+        let (meili_client, meili_swap_future, meili_housing_future) = meili_future.await?;
 
         Ok((
             Arc::new(Self {
@@ -64,7 +54,8 @@ impl AppState {
                 redis_connection_manager,
                 meili_client,
             }),
-            meili_reindex_future,
+            meili_swap_future,
+            meili_housing_future,
         ))
     }
 }

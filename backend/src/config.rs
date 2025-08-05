@@ -1,4 +1,4 @@
-use crate::AppError;
+use crate::error::ConfigError;
 use std::{env, fmt::Display, fs::read_to_string, str::FromStr};
 use tracing::{info, warn};
 
@@ -35,7 +35,6 @@ pub struct Session {
 #[derive(Clone)]
 pub struct WebsiteSpecific {
     pub max_items: u8,
-    pub home_limit_ms: u8,
 }
 
 #[derive(Clone)]
@@ -57,7 +56,7 @@ pub struct Config {
 }
 
 impl Server {
-    pub fn load() -> Result<Self, AppError> {
+    pub fn load() -> Result<Self, ConfigError> {
         Ok(Self {
             rust_port: try_load("RUST_PORT", "8080")?,
             svelte_url: try_load("SVELTE_URL", "http://localhost:5173")?,
@@ -66,23 +65,23 @@ impl Server {
 }
 
 impl Email {
-    pub fn load() -> Result<Self, AppError> {
+    pub fn load() -> Result<Self, ConfigError> {
         Ok(Self {
             from_email: read_secret("RUST_FROM_EMAIL").unwrap_or_else(|e| {
-                panic!("Failed to load RUST_FROM_EMAIL: {}", e);
+                panic!("Failed to load RUST_FROM_EMAIL: {e}");
             }),
             from_email_server: read_secret("RUST_FROM_EMAIL_SERVER").unwrap_or_else(|e| {
-                panic!("Failed to load RUST_FROM_EMAIL_SERVER: {}", e);
+                panic!("Failed to load RUST_FROM_EMAIL_SERVER: {e}");
             }),
             from_email_password: read_secret("RUST_FROM_EMAIL_PASSWORD").unwrap_or_else(|e| {
-                panic!("Failed to load RUST_FROM_EMAIL_PASSWORD: {}", e);
+                panic!("Failed to load RUST_FROM_EMAIL_PASSWORD: {e}");
             }),
         })
     }
 }
 
 impl Authentication {
-    pub fn load() -> Result<Self, AppError> {
+    pub fn load() -> Result<Self, ConfigError> {
         Ok(Self {
             auth_max_attempts: try_load("RUST_AUTH_MAX_ATTEMPTS", "15")?,
             auth_lock_duration_seconds: try_load("RUST_AUTH_LOCK_DURATION_SECS", "1800")?,
@@ -95,7 +94,7 @@ impl Authentication {
 }
 
 impl Session {
-    pub fn load() -> Result<Self, AppError> {
+    pub fn load() -> Result<Self, ConfigError> {
         Ok(Self {
             temporary_session_duration_seconds: try_load(
                 "PUBLIC_TEMP_SESSION_DURATION_SECS",
@@ -108,16 +107,15 @@ impl Session {
 }
 
 impl WebsiteSpecific {
-    pub fn load() -> Result<Self, AppError> {
+    pub fn load() -> Result<Self, ConfigError> {
         Ok(Self {
-            home_limit_ms: try_load("RUST_HOME_LIMIT_MS", "50")?,
             max_items: try_load("RUST_MAX_ITEMS", "15")?,
         })
     }
 }
 
 impl Bot {
-    pub fn load() -> Result<Self, AppError> {
+    pub fn load() -> Result<Self, ConfigError> {
         Ok(Self {
             photo_url: try_load("RUST_BOT_PHOTO_URL", "https://boiler/photos")?,
             max_bytes: try_load("RUST_BOT_MAX_BYTES", "5_242_880")?,
@@ -128,7 +126,7 @@ impl Bot {
 }
 
 impl Config {
-    pub fn load() -> Result<Self, AppError> {
+    pub fn load() -> Result<Self, ConfigError> {
         Ok(Self {
             server: Server::load()?,
             email: Email::load()?,
@@ -140,24 +138,24 @@ impl Config {
     }
 }
 
-fn var(key: &str) -> Result<String, AppError> {
+fn var(key: &str) -> Result<String, ConfigError> {
     env::var(key).map_err(|e| {
         warn!("Environment variable {} not found, using default", key);
-        AppError::Environment(e)
+        ConfigError::Environment(e)
     })
 }
 
-pub fn read_secret(secret_name: &str) -> Result<String, AppError> {
-    let path = format!("/run/secrets/{}", secret_name);
+pub fn read_secret(secret_name: &str) -> Result<String, ConfigError> {
+    let path = format!("/run/secrets/{secret_name}");
     read_to_string(&path)
         .map(|s| s.trim().to_string())
         .map_err(|e| {
             warn!("Failed to read {} from file: {}", secret_name, e);
-            AppError::IO(e)
+            ConfigError::IO(e)
         })
 }
 
-pub fn try_load<T: FromStr>(key: &str, default: &str) -> Result<T, AppError>
+pub fn try_load<T: FromStr>(key: &str, default: &str) -> Result<T, ConfigError>
 where
     T::Err: Display,
 {
@@ -165,5 +163,5 @@ where
         .inspect_err(|_| info!("{key} not set, using default: {default}"))
         .unwrap_or_else(|_| default.to_string())
         .parse()
-        .map_err(|e| AppError::Config(format!("Invalid {} value: {}", key, e)))
+        .map_err(|e| ConfigError::Config(format!("Invalid {key} value: {e}")))
 }

@@ -3,7 +3,10 @@ import { env } from '$env/dynamic/private'
 import {
 	PUBLIC_SWAP_BACKEND_PATH,
 	PUBLIC_HOME_BACKEND_PATH,
-	PUBLIC_MEILI_PATH
+	PUBLIC_HOUSING_BACKEND_PATH,
+	PUBLIC_MEILI_PATH,
+	PUBLIC_SVELTE_SWAP_ROOT,
+	PUBLIC_SVELTE_HOUSING_ROOT
 } from '$env/static/public'
 import { SignJWT } from 'jose'
 
@@ -17,7 +20,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 		!event.cookies.get('api_token')
 	) {
 		switch (true) {
-			case event.url.pathname.startsWith('/swap'):
+			case event.url.pathname.startsWith(PUBLIC_SVELTE_HOUSING_ROOT):
+				token = env.HOUSING_API_TOKEN!
+				tokenPath = PUBLIC_HOUSING_BACKEND_PATH
+				search = true
+				break
+			case event.url.pathname.startsWith(PUBLIC_SVELTE_SWAP_ROOT):
 				token = env.SWAP_API_TOKEN!
 				tokenPath = PUBLIC_SWAP_BACKEND_PATH
 				search = true
