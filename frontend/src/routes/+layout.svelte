@@ -4,6 +4,8 @@
 	import { browser } from '$app/environment'
 	import { refreshToken } from '$lib/utils'
 	import { SvelteToast } from '@zerodevx/svelte-toast'
+	import '$lib/housing/constants/housing'
+	import '$lib/housing/constants/reviews'
 
 	let { children } = $props()
 	let interval: number

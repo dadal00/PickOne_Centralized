@@ -5,7 +5,8 @@
 	import Input from '../templates/Input.svelte'
 	import { goto } from '$app/navigation'
 	import { appState } from '$lib/housing/app-state.svelte'
-	import type { CampusType, HousingType } from '$lib/housing/models/housing'
+	import type { HousingType } from '$lib/housing/models/housing'
+	import type { CampusType } from '$lib/housing/constants/housing'
 
 	let query: string = $state('')
 
@@ -13,7 +14,7 @@
 		Reactively updating the query
 	*/
 	$effect(() => {
-		appState.setHousingQuery(query)
+		appState.setQuery(query)
 	})
 
 	// Go to search with specified filters

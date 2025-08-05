@@ -1,10 +1,16 @@
-import { PUBLIC_HOUSING_MAX_CHARS, PUBLIC_HOUSING_MIN_CHARS } from '$env/static/public'
+import {
+	PUBLIC_HOUSING_BACKEND_PATH,
+	PUBLIC_HOUSING_MAX_CHARS,
+	PUBLIC_HOUSING_MIN_CHARS
+} from '$env/static/public'
 import { appState } from '../app-state.svelte'
-import type { HousingID } from '../models/housing'
-import type { Review, ReviewRating, ReviewRatings, WriteReviewRatings } from '../models/reviews'
+import type { Review, ReviewRatings, WriteReviewRatings } from '../models/reviews'
+import type { ReviewRating } from '../constants/reviews'
 import { bindNumber } from './utils'
+import type { HousingID } from '../constants/housing'
 
 export function convertRatingToBase5(rating: number): number {
+	// console.log(bindNumber(rating, 0, 500) / 100.0)
 	return bindNumber(rating, 0, 500) / 100.0
 }
 
@@ -85,4 +91,17 @@ export function validatePayload(
 		ratings: ratings as ReviewRatings,
 		description: description
 	}
+}
+
+export function flushThumbs(): void {
+	const payload = appState.getThumbActions()
+
+	if (Object.keys(payload).length === 0) return
+
+	navigator.sendBeacon(
+		PUBLIC_HOUSING_BACKEND_PATH + 'update-thumbs',
+		new Blob([JSON.stringify(payload)], { type: 'application/json' })
+	)
+
+	appState.resetThumbs()
 }

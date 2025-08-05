@@ -5,13 +5,11 @@
 	import Body from '$lib/housing/components/housing/Body.svelte'
 	import { onMount } from 'svelte'
 	import { housingSearch } from '$lib/housing/meili-client'
-	import { defaultHousingSortBy, type HousingID } from '$lib/housing/models/housing'
+	import { defaultHousingSortBy } from '$lib/housing/models/housing'
+	import type { HousingID } from '$lib/housing/constants/housing'
 	import { HousingIDIterable } from '$lib/housing/constants/housing'
 
-	/*
-		$derive will load in housing even if does not exist initially
-		- such as when the loadHousing finishes in onMount
-	*/
+	// $derive will load in housing even if does not exist initially
 	let housing = $derived(appState.fetchHousing(page.params.id!))
 
 	onMount(() => {
@@ -19,7 +17,7 @@
 		const id = page.params.id
 
 		// Verify that this housing is a valid option before pulling
-		if (!housing && id && HousingIDIterable.includes(id as HousingID)) {
+		if (id && HousingIDIterable.includes(id as HousingID)) {
 			housingSearch(id, '', '', '', defaultHousingSortBy, 0)
 		}
 	})

@@ -1,28 +1,24 @@
 <script lang="ts">
 	import { Funnel, Search } from '@lucide/svelte'
-	import SearchSelect from '../templates/SearchSelect.svelte'
-	import {
-		housingFilterCampusSelect,
-		housingFilterCostSelect,
-		housingFilterTypeSelect,
-		housingSortDirectionSelect,
-		housingSortSelect
-	} from '$lib/housing/models/housing'
 	import { onDestroy, onMount } from 'svelte'
 	import { appState } from '$lib/housing/app-state.svelte'
 	import { PUBLIC_HOUSING_MIN_CHARS } from '$env/static/public'
+	import HousingFilters from './HousingFilters.svelte'
+	import ReviewFilters from '../housing/subcomponents/ReviewFilters.svelte'
+
+	const { searchFor } = $props<{
+		searchFor: 'Housing' | 'Reviews'
+	}>()
 
 	// Query state variable to sync with central state
 	let query: string = $state('')
 
 	onMount(() => {
-		console.log(appState.getHousingTypeFilter())
-
-		query = appState.getHousingQuery()
+		query = appState.getQuery()
 	})
 
 	$effect(() => {
-		appState.setHousingQuery(query)
+		appState.setQuery(query)
 	})
 
 	onDestroy(() => {
@@ -50,30 +46,10 @@
 				/>
 			</div>
 		</div>
-		<SearchSelect
-			selectOptions={housingFilterTypeSelect}
-			getAction={appState.getHousingTypeFilter.bind(appState)}
-			setAction={appState.setHousingTypeFilter.bind(appState)}
-		/>
-		<SearchSelect
-			selectOptions={housingFilterCampusSelect}
-			getAction={appState.getCampusTypeFilter.bind(appState)}
-			setAction={appState.setCampusTypeFilter.bind(appState)}
-		/>
-		<SearchSelect
-			selectOptions={housingFilterCostSelect}
-			getAction={appState.getCostSymbolFilter.bind(appState)}
-			setAction={appState.setCostSymbolFilter.bind(appState)}
-		/>
-		<SearchSelect
-			selectOptions={housingSortSelect}
-			getAction={appState.getHousingSortCategory.bind(appState)}
-			setAction={appState.setHousingSortCategory.bind(appState)}
-		/>
-		<SearchSelect
-			selectOptions={housingSortDirectionSelect}
-			getAction={appState.getHousingSortDirection.bind(appState)}
-			setAction={appState.setHousingSortDirection.bind(appState)}
-		/>
+		{#if searchFor == 'Housing'}
+			<HousingFilters />
+		{:else}
+			<ReviewFilters />
+		{/if}
 	</div>
 </div>

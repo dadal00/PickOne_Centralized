@@ -2,25 +2,33 @@ import { PaginatingClass } from '$lib/classes.svelte'
 import type { SortDirection } from './models/general'
 import {
 	defaultHousingSortBy,
-	type CampusType,
 	type CostSymbol,
 	type Housing,
-	type HousingID,
 	type HousingQuery,
 	type HousingSortBy,
 	type HousingType
 } from './models/housing'
 import { HousingFields } from './constants/housing'
-import { type HousingSortable } from './constants/housing'
+import type { HousingSortable, CampusType, HousingID } from './constants/housing'
 import {
 	defaultReviewSortBy,
 	type Review,
 	type ReviewQuery,
-	type ReviewRating,
-	type ReviewSortBy
+	type ReviewSortBy,
+	type ThumbsDelta,
+	type ThumbsDeltaMap
 } from './models/reviews'
+import { type ReviewRating } from './constants/reviews'
+import { PUBLIC_HOUSING_MAX_THUMBS } from '$env/static/public'
+import { flushThumbs } from './helpers/housing'
 
 class AppState extends PaginatingClass {
+	/*
+		Unified query
+		- no need to separate as housing is cleared on destruction of both searches
+	*/
+	private query: string = $state('')
+
 	// Housing search results
 	private housingHits: Housing[] = $state([
 		{
@@ -43,8 +51,6 @@ class AppState extends PaginatingClass {
 			address: '1131 3rd Street, West Lafayette, IN 47907'
 		}
 	])
-	// Housing search params
-	private housingQuery: string = $state('')
 	// Filters, default is no filters
 	private housingTypeFilter: HousingType | '' = $state('')
 	private campusTypeFilter: CampusType | '' = $state('')
@@ -72,8 +78,6 @@ class AppState extends PaginatingClass {
 			thumbs_down: 3
 		}
 	])
-	// Review search params
-	private reviewQuery: string = $state('')
 	// Filters, default is no filter
 	private reviewRatingFilter: ReviewRating | 0 = $state(0)
 	// Sorting, default is most recent
@@ -83,8 +87,33 @@ class AppState extends PaginatingClass {
 	private writeReviewHousing: HousingID | '' = $state('')
 	// Display error when posting reviews
 	private postError: string = $state('')
-
+	// Debouncing posting
 	private postLimited: boolean = $state(false)
+
+	// Array of thumb actions
+	private thumbActions: ThumbsDeltaMap = $state({})
+
+	getThumbActions(): ThumbsDeltaMap {
+		return this.thumbActions
+	}
+
+	updateThumbAction(reviewId: string, action: ThumbsDelta): void {
+		if (!(reviewId in this.thumbActions)) {
+			this.thumbActions[reviewId] = action
+
+			if (Object.keys(this.thumbActions).length >= Number(PUBLIC_HOUSING_MAX_THUMBS)) {
+				flushThumbs()
+			}
+		} else if (this.thumbActions[reviewId] === action) {
+			delete this.thumbActions[reviewId]
+		} else {
+			this.thumbActions[reviewId] = action
+		}
+	}
+
+	resetThumbs(): void {
+		this.thumbActions = {}
+	}
 
 	getPostError(): string {
 		return this.postError
@@ -127,7 +156,7 @@ class AppState extends PaginatingClass {
 	// The entire query including options
 	getFullHousingQuery(): HousingQuery {
 		return {
-			query: this.housingQuery,
+			query: this.query,
 			[HousingFields.HOUSING_TYPE]: this.housingTypeFilter,
 			[HousingFields.CAMPUS_TYPE]: this.campusTypeFilter,
 			[HousingFields.COST_SYMBOL]: this.costSymbolFilter,
@@ -137,12 +166,12 @@ class AppState extends PaginatingClass {
 	}
 
 	// Only the string query
-	getHousingQuery(): string {
-		return this.housingQuery
+	getQuery(): string {
+		return this.query
 	}
 
-	setHousingQuery(query: string): void {
-		this.housingQuery = query
+	setQuery(query: string): void {
+		this.query = query
 	}
 
 	// Get housing filters
@@ -192,25 +221,29 @@ class AppState extends PaginatingClass {
 	// Query the reviews
 	getFullReviewQuery(): ReviewQuery {
 		return {
-			query: this.reviewQuery,
+			query: this.query,
 			[HousingFields.OVERALL_RATING]: this.reviewRatingFilter,
 			sortBy: this.reviewSortBy,
 			offset: this.offset
 		}
 	}
 
-	setReviewQuery(query: string): void {
-		this.reviewQuery = query
+	// Modify rating filters
+	getRatingFilter(): number {
+		return this.reviewRatingFilter
 	}
 
-	// Modify rating filters
 	setRatingFilter(reviewRating: ReviewRating | 0): void {
 		this.reviewRatingFilter = reviewRating
 	}
 
-	// Modify rousing sorting
-	setReviewSortBy(reviewSortBy: ReviewSortBy): void {
-		this.reviewSortBy = reviewSortBy
+	// Modify review sorting
+	getReviewSortDirection(): SortDirection {
+		return this.reviewSortBy[1]
+	}
+
+	setReviewSortDirection(reviewSortDirection: SortDirection): void {
+		this.reviewSortBy[1] = reviewSortDirection
 	}
 
 	// Search results
@@ -236,11 +269,19 @@ class AppState extends PaginatingClass {
 
 	// Clear housing search
 	clearFullHousingQuery(): void {
-		this.housingQuery = ''
+		this.query = ''
 		this.housingTypeFilter = ''
 		this.campusTypeFilter = ''
 		this.costSymbolFilter = ''
 		this.housingSortBy = defaultHousingSortBy
+		this.offset = 0
+	}
+
+	// Clear reviews search
+	clearFullReviewQuery(): void {
+		this.query = ''
+		this.reviewRatingFilter = 0
+		this.reviewSortBy = defaultReviewSortBy
 		this.offset = 0
 	}
 }

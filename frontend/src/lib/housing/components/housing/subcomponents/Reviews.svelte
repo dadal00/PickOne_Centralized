@@ -4,7 +4,7 @@
 	import CardPiece from '../../templates/CardPiece.svelte'
 	import { RatingCategoryIterable } from '$lib/housing/models/general'
 	import { HousingFields } from '$lib/housing/constants/housing'
-	import { ReviewFields } from '$lib/housing/models/reviews'
+	import { ReviewFields } from '$lib/housing/constants/reviews'
 	import {
 		convertDate,
 		convertRatingToBase5,
@@ -67,12 +67,14 @@
 					<div class="flex items-center space-x-6">
 						<button
 							class="flex items-center space-x-2 hover:text-green-600 transition-colors dark:hover:text-green-400"
+							onclick={() => appState.updateThumbAction(review[HousingFields.ID]!, 'up')}
 						>
 							<ThumbsUp class="h-4 w-4" />
 							<span class="font-medium">{review[ReviewFields.THUMBS_UP]}</span>
 						</button>
 						<button
 							class="flex items-center space-x-2 hover:text-red-600 transition-colors dark:hover:text-red-400"
+							onclick={() => appState.updateThumbAction(review[HousingFields.ID]!, 'down')}
 						>
 							<ThumbsDown class="h-4 w-4" />
 							<span class="font-medium">{review[ReviewFields.THUMBS_DOWN]}</span>

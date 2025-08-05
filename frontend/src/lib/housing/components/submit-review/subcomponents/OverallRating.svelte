@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { convertBase5ToRating, convertRatingToBase5 } from '$lib/housing/helpers/housing'
-	import type { ReviewRating } from '$lib/housing/models/reviews'
+	import type { ReviewRating } from '$lib/housing/constants/reviews'
 	import StarRating from '../StarRating.svelte'
 
 	let { overallRating = $bindable() } = $props<{

@@ -14,3 +14,13 @@ export const reviewSortLabels: Record<SortDirection, string> = {
 }
 
 export const ReviewRatingIterable = [100, 200, 300, 400, 500] as const
+export type ReviewRating = (typeof ReviewRatingIterable)[number]
+
+export const reviewRatingLabels: Record<ReviewRating | 0, string> = {
+	0: 'All',
+	100: '1 star',
+	200: '2 star',
+	300: '3 star',
+	400: '4 star',
+	500: '5 star'
+}

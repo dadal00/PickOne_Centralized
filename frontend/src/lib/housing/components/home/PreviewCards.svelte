@@ -4,7 +4,7 @@
 	import Button from '$lib/housing/components/templates/Button.svelte'
 	import CardPiece from '$lib/housing/components/templates/CardPiece.svelte'
 	import { ArrowRight, Star } from '@lucide/svelte'
-	import { defaultHousingSortBy, type HousingID } from '$lib/housing/models/housing'
+	import { defaultHousingSortBy } from '$lib/housing/models/housing'
 	import { HousingFields } from '$lib/housing/constants/housing'
 	import { HousingNameLabels } from '$lib/housing/constants/housing'
 	import { convertRatingToHousingLabel } from '$lib/housing/helpers/housing'
@@ -45,7 +45,7 @@
 									className="text-2xl font-bold text-gray-900 group-hover:text-yellow-700 transition-colors mb-2 dark:text-gray-100 dark:group-hover:text-yellow-400"
 									cardPiece="cardTitle"
 								>
-									{HousingNameLabels[housing[HousingFields.ID] as HousingID]}
+									{HousingNameLabels[housing[HousingFields.ID]]}
 								</CardPiece>
 								<p class="text-sm text-gray-500 dark:text-gray-400 font-medium">
 									{housing[HousingFields.CAMPUS_TYPE] + ' ' + housing[HousingFields.HOUSING_TYPE]}

@@ -49,9 +49,9 @@ export const RatingCategoryDetails = [
 	}
 ]
 
-export const RatingCategoryIterable = Object.entries(RatingCategoryDetails).map(([key, value]) => [
-	key as RatingCategoryValue,
-	value.label
+export const RatingCategoryIterable = RatingCategoryDetails.map((item) => [
+	item.key,
+	item.label
 ]) as [RatingCategoryValue, string][]
 
 export type SelectOptions = {

@@ -1,6 +1,8 @@
 import { toSelectOptions } from '../helpers/utils'
 import type { SelectOptions, SortDirection } from '../models/general'
-import { type CampusType, type HousingID } from '../models/housing'
+
+export type HousingID = (typeof HousingIDIterable)[number]
+export type CampusType = (typeof CampusTypeIterable)[number]
 
 export const HousingFields = {
 	ID: 'id',
@@ -52,15 +54,15 @@ export const CampusTypeIterable = ['On-Campus', 'Off-Campus'] as const
 export const HousingNameLabels: Record<HousingID | CampusType, string> = {
 	// On-Campus
 	[CampusTypeIterable[0]]: CampusTypeIterable[0],
-	'3rd-and-west': '3rd and West',
+	'third-and-west': '3rd and West',
 	aspire: 'Aspire at Discovery Park',
-	'benchmark-ii': 'Benchmark II',
+	'benchmark-i-i': 'Benchmark II',
 	'cary-quad': 'Cary Quadrangle',
 	earhart: 'Earhart Hall',
 	'first-street': 'First Street Towers',
 	frieda: 'Frieda Parker Hall',
 	fuse: 'Fuse Apartments',
-	'grant-333': 'Grant Street Station 333',
+	grant333: 'Grant Street Station 333',
 	harrison: 'Harrison Hall',
 	hawkins: 'Hawkins Hall',
 	hilltop: 'Hilltop Apartments',
@@ -71,12 +73,12 @@ export const HousingNameLabels: Record<HousingID | CampusType, string> = {
 	'meredith-south': 'Meredith South',
 	owen: 'Owen Hall',
 	provenance: 'Provenance Apartments',
-	'russell-414': '414 Russell Street',
+	russell414: '414 Russell Street',
 	shreve: 'Shreve Hall',
-	'steely-410': '410 Steely Street',
+	steely410: '410 Steely Street',
 	tarkington: 'Tarkington Hall',
-	'waldron-125': '125 Waldron Street',
-	'waldron-19': '19 Waldron Street',
+	waldron125: '125 Waldron Street',
+	waldron19: '19 Waldron Street',
 	'waldron-square': 'Waldron Square',
 	wiley: 'Wiley Hall',
 	winifred: 'Winifred Parker Hall',
@@ -120,14 +122,14 @@ export const HousingIDIterable = [
 	'hawkins',
 	'fuse',
 	'aspire',
-	'3rd-and-west',
-	'benchmark-ii',
-	'grant-333',
+	'third-and-west',
+	'benchmark-i-i',
+	'grant333',
 	'provenance',
-	'russell-414',
-	'steely-410',
-	'waldron-125',
-	'waldron-19',
+	'russell414',
+	'steely410',
+	'waldron125',
+	'waldron19',
 	'waldron-square',
 	'honors-college-residences',
 

@@ -1,8 +1,13 @@
 import { toSelectOptions } from '../helpers/utils'
 import type { RatingsBrokenDown, SelectOptions, SortBy } from './general'
-import type { HousingID } from './housing'
 import { HousingFields } from '../constants/housing'
-import { ReviewFields, ReviewRatingIterable, reviewSortLabels } from '../constants/reviews'
+import {
+	ReviewFields,
+	reviewRatingLabels,
+	reviewSortLabels,
+	type ReviewRating
+} from '../constants/reviews'
+import type { HousingID } from '../constants/housing'
 
 // Review struct
 export type Review = {
@@ -47,7 +52,6 @@ export type ThumbsDelta = 'up' | 'down'
 // Hash map using uuid of the review as key
 export type ThumbsDeltaMap = Record<string, ThumbsDelta>
 
-export type ReviewRating = (typeof ReviewRatingIterable)[number]
 // Typing the generic shared struct for sub ratings
 export type ReviewRatings = RatingsBrokenDown<ReviewRating>
 
@@ -67,6 +71,6 @@ export type ReviewSortBy = SortBy<ReviewSortable>
 // Default sorting is by most number of reviews first
 export const defaultReviewSortBy: ReviewSortBy = [ReviewFields.DATE, 'desc']
 
-export const reviewSortOptions: SelectOptions[] = toSelectOptions(reviewSortLabels)
+export const reviewSortSelect: SelectOptions[] = toSelectOptions(reviewSortLabels)
 
-export { ReviewFields }
+export const reviewFilterRatingSelect: SelectOptions[] = toSelectOptions(reviewRatingLabels)

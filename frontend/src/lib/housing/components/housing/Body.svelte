@@ -5,16 +5,13 @@
 	import SearchComponent from '$lib/housing/components/search/Search.svelte'
 	import { type Housing } from '$lib/housing/models/housing'
 
-	const tabs = [
-		{ value: 'overview', label: 'Overview' },
-		{ value: 'reviews', label: 'Reviews' }
-	]
+	const tabs = ['Overview', 'Reviews']
 
 	const { housing } = $props<{
 		housing: Housing
 	}>()
 
-	let activeTab = $state('overview')
+	let activeTab = $state(tabs[0])
 </script>
 
 <div class="space-y-8">
@@ -25,21 +22,21 @@
 		{#each tabs as tab}
 			<TabPiece
 				className="rounded-lg font-semibold"
-				tabValue={tab.value}
+				tabValue={tab}
 				tabPiece="trigger"
 				activeClasses="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white"
 				bind:activeTab
 			>
-				{tab.label}
+				{tab}
 			</TabPiece>
 		{/each}
 	</TabPiece>
 
 	<TabPiece tabPiece="content" className="space-y-8">
-		{#if activeTab === 'overview'}
+		{#if activeTab === 'Overview'}
 			<Overview {housing} />
-		{:else if activeTab === 'reviews'}
-			<SearchComponent />
+		{:else if activeTab === 'Reviews'}
+			<SearchComponent searchFor="Reviews" />
 			<Reviews />
 		{/if}
 	</TabPiece>

@@ -7,12 +7,12 @@ import {
 	housingSortDirectionLabels,
 	housingSortLabels,
 	HousingTypeIterable,
-	type HousingIDIterable,
+	type CampusType,
+	type HousingID,
 	type HousingSortable
 } from '../constants/housing'
 
 // Housing ID type derived from ID bank
-export type HousingID = (typeof HousingIDIterable)[number]
 
 // Housing struct
 export type Housing = {
@@ -58,7 +58,6 @@ export const housingFilterTypeSelect: SelectOptions[] = toSelectOptions(
 	toFilterOptions(HousingTypeIterable)
 )
 
-export type CampusType = (typeof CampusTypeIterable)[number]
 export const housingFilterCampusSelect: SelectOptions[] = toSelectOptions(
 	toFilterOptions(CampusTypeIterable)
 )
